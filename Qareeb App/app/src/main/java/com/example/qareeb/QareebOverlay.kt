@@ -98,7 +98,7 @@ class QareebOverlay(
                 windowManager.addView(overlayView, params)
 
                 // --- THE FIX IS HERE ---
-                // Wait 350 before grabbing the mic.
+                // Wait 500 before grabbing the mic.
                 // This prevents the "start failed: -38" error.
                 mainHandler.postDelayed({
                     startRecordingAndListening()
