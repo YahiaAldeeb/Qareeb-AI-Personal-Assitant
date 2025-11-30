@@ -1,0 +1,12 @@
+gradio
+transformers
+torch
+sentencepiece
+soundfile
+openai-whisper
+gTTS
+numpy
+scipy
+ffmpeg-python
+fastapi 
+uvicorn
