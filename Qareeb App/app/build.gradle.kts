@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -35,8 +36,15 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-}
 
+    buildFeatures {
+        compose = true
+        viewBinding = true // Keep this true if you use ViewBinding elsewhere, otherwise false
+    }
+    composeOptions {
+//        kotlinCompilerExtensionVersion = "1.5.1"
+    }
+}
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -48,4 +56,24 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation("ai.picovoice:porcupine-android:3.0.1")
     implementation("com.airbnb.android:lottie:6.1.0")
+
+    // Retrofit (The Networking Client)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // OkHttp (Logging interceptor to see API calls in Logcat - VERY helpful)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    // Coroutines (Jetpack's tool for background tasks)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+
+
+    // Compose BOM (Bill of Materials) - manages versions
+    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.activity:activity-compose:1.7.2") // Vital for MainActivity
+
 }
