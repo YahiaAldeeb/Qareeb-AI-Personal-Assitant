@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -56,6 +57,11 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation("ai.picovoice:porcupine-android:3.0.1")
     implementation("com.airbnb.android:lottie:6.1.0")
+
+    //Database
+    implementation("androidx.room:room-runtime:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
 
     // Retrofit (The Networking Client)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
