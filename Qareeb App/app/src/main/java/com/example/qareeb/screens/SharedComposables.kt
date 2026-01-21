@@ -35,6 +35,7 @@ import com.example.qareeb.R
 import androidx.compose.material3.Surface
 
 
+
 // Font definition - shared throughout the app
 val dmSansFamily = FontFamily(
     Font(R.font.dmsans_regular, FontWeight.Normal),
@@ -42,6 +43,8 @@ val dmSansFamily = FontFamily(
     Font(R.font.dmsans_bold, FontWeight.Bold),
     Font(R.font.dmsans_extralight, weight = FontWeight.ExtraLight),
 )
+val interFamily= FontFamily(Font(R.font.inter_24pt_regular, FontWeight.Normal),
+    )
 
 @Composable
 fun FancyGradientBackground(content: @Composable () -> Unit) {
@@ -237,7 +240,7 @@ fun PlanCard(plan: PlanItem) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(plan.title, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(plan.title, fontFamily = , fontWeight = FontWeight.Bold, color = Color.Black)
                 Text(plan.time, fontSize = 12.sp, color = Color.Gray)
             }
             Surface(
