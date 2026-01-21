@@ -305,7 +305,7 @@ fun BigTasksBanner(
                         text = "Today's AI Analysis",
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 15.sp,
-                        fontFamily = dmSansFamily
+                        //fontFamily = dmSansFamily
                     )
 
                     Spacer(Modifier.height(4.dp))
@@ -315,7 +315,7 @@ fun BigTasksBanner(
                         color = Color.White,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = dmSansFamily,
+                        //fontFamily = dmSansFamily,
                         lineHeight = 26.sp
                     )
                 }

@@ -296,5 +296,3 @@ fun SearchBarStub() {
     )
 }
 
-
-
