@@ -34,5 +34,11 @@ data class Transaction(
     val amount: Double,
     val date: Long = System.currentTimeMillis(),
     val source: String? = null,
-    val description: String? = null
+    val description: String? = null,
+
+    // true = income (green), false = outcome/expense (red)
+    val income: Boolean = false,
+
+    // Transaction state: "completed", "declined", "pending", "in_progress"
+    val state: String = "pending"
 )
