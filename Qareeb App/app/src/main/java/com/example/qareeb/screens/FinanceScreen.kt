@@ -247,12 +247,12 @@ fun MyFinanceScreen() {
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(days) { (day, date) ->
-                                DayChip(
+                                /*DayChip(
                                     day = day,
                                     date = date,
                                     isSelected = day == selectedDay,
                                     onClick = { selectedDay = day }
-                                )
+                                )*/
                             }
                         }
 
@@ -262,13 +262,13 @@ fun MyFinanceScreen() {
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(categories) { category ->
+                            /*items(categories) { category ->
                                 CategoryChip(
                                     text = category,
                                     isSelected = category == selectedCategory,
                                     onClick = { selectedCategory = category }
                                 )
-                            }
+                            }*/
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))

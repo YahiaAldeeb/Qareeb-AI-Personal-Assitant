@@ -262,7 +262,8 @@ fun WeekChipsRow(selected: String, onSelect: (String) -> Unit) {
     val days = listOf("Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        //neghyaro l one ashann nekhlay thursday teban
+        horizontalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         items(days) { day ->
             FilterChip(
