@@ -20,4 +20,10 @@ interface TransactionDao {
 
     @Delete
     suspend fun deleteTransaction(transaction: Transaction)
+
+    @Query("SELECT * FROM `transaction` WHERE user_id = :userId AND income = :isIncome")
+    fun getTransactionsByType(userId: Long, isIncome: Boolean): Flow<List<Transaction>>
+
+    @Query("SELECT * FROM `transaction` WHERE user_id = :userId AND state = :state")
+    fun getTransactionsByState(userId: Long, state: String): Flow<List<Transaction>>
 }
