@@ -20,4 +20,10 @@ interface UserDao {
 
     @Delete
     suspend fun deleteUser(user: User)
+
+    @Query("SELECT * FROM user WHERE user_id = :userId AND voice_embedding IS NOT NULL")
+    suspend fun getUserWithVoiceBiometric(userId: Long): User?
+
+    @Query("UPDATE user SET voice_embedding = :embedding WHERE user_id = :userId")
+    suspend fun updateVoiceEmbedding(userId: Long, embedding: String)
 }
