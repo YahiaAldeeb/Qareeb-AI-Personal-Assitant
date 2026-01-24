@@ -2,6 +2,7 @@ package com.example.qareeb.data.dao
 
 import androidx.room.*
 import com.example.qareeb.data.entity.Transaction
+import com.example.qareeb.data.entity.TransactionState
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -25,5 +26,5 @@ interface TransactionDao {
     fun getTransactionsByType(userId: Long, isIncome: Boolean): Flow<List<Transaction>>
 
     @Query("SELECT * FROM `transaction` WHERE user_id = :userId AND state = :state")
-    fun getTransactionsByState(userId: Long, state: String): Flow<List<Transaction>>
+    fun getTransactionsByState(userId: Long, state: TransactionState): Flow<List<Transaction>>
 }
