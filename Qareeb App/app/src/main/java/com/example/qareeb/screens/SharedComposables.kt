@@ -464,5 +464,3 @@ fun formatDate(timestamp: Long): String {
     return formatter.format(Date(timestamp))
 }
 
-
-
