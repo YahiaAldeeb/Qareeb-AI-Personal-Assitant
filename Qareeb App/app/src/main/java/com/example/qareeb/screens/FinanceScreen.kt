@@ -26,6 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.presentation.ui.components.FancyGradientBackground
+import com.example.qareeb.presentation.ui.components.SearchBarStub
+import com.example.qareeb.ui.theme.dmSansFamily
 
 data class FinanceTask(
     val id: String,
