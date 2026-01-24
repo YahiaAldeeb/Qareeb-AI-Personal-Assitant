@@ -6,8 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,12 +19,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.ui.theme.QareebTheme
 import com.example.qareeb.R
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import com.example.qareeb.utilis.toLocalDate
+import androidx.compose.ui.zIndex
+
 
 
 // -------------------------
@@ -34,18 +39,25 @@ import com.example.qareeb.R
 // -------------------------
 data class PlanItem(
     val title: String,
+    val taskId: Long,
     val time: String,
-    val tag: String,
-    val tagColor: Color
+    val tag: PlanStatus,
+    val dueDate: Long = System.currentTimeMillis()
 )
 
 data class ExpenseItem(
     val title: String,
-    val subtitle: String,
-    val status: String,
-    val amount: String,
-    val statusColor: Color
+    val status: TransactionStatus,
+    val amount: Double,
+    val date: Long = System.currentTimeMillis(),
+    val source: String? = null,
+    val description: String? = null,
+    val income: Boolean
 )
+
+
+
+
 
 // -------------------------
 // Screen
@@ -58,34 +70,69 @@ fun DashboardScreen(
 ) {
     val plans = remember {
         listOf(
-            PlanItem("Meeting at work", "10:00–6:00", "In Progress", Color(0xFF7C3AED)),
-            PlanItem("Dinner with Ahmed", "20:45–0:01", "Completed", Color(0xFF16A34A)),
-            PlanItem("Tennis Training", "20:45–0:01", "Postponed", Color(0xFFF97316)),
+            PlanItem(
+                title = "Meeting at work",
+                time = "10:00 – 6:00",
+                tag = PlanStatus.IN_PROGRESS,
+                dueDate = System.currentTimeMillis(),
+                taskId = 1
+
+            ),
+            PlanItem(
+                title = "Dinner with Ahmed",
+                time = "20:45 – 00:01",
+                tag = PlanStatus.COMPLETED,
+                dueDate = System.currentTimeMillis() + 86_400_000,
+                taskId = 2
+            ),
+            PlanItem(
+                title = "Tennis Training",
+                time = "20:45 – 00:01",
+                tag = PlanStatus.POSTPONED,
+                dueDate = System.currentTimeMillis() + 2 * 86_400_000,
+                taskId = 3
+            )
         )
     }
+
+
 
     val expenses = remember {
         listOf(
-            ExpenseItem("Expert Consultation", "12/01/2024", "Completed", "$150.00", Color(0xFF16A34A)),
-            ExpenseItem("Office Supplies", "12/01/2024", "Declined", "$45.00", Color(0xFFEF4444)),
-            ExpenseItem("Website Redesign", "12/01/2024", "In Progress", "$2,500.00", Color(0xFF7C3AED)),
+            ExpenseItem(
+                title = "Expert Consultation",
+                status = TransactionStatus.COMPLETED,
+                amount = 150.00,
+                date = 1704067200000L,// 01 Jan 2024 (example timestamp),
+                income=false
+            ),
+            ExpenseItem(
+                title = "Office Supplies",
+                status = TransactionStatus.DECLINED,
+
+                amount = 45.00,
+                date = 1704067200000L,
+                income=true
+            ),
+            ExpenseItem(
+                title = "Website Redesign",
+                status = TransactionStatus.IN_PROGRESS,
+
+                amount = 2500.00,
+                date = 1704067200000L,
+                income = true
+            )
         )
     }
 
-    var selectedDay by remember { mutableStateOf("Mon") }
+
+
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+
 
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = { BottomNavBar() },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO */ },
-                shape = CircleShape,
-                containerColor = Color(0xFF7C3AED),
-                contentColor = Color.White
-            ) { Icon(Icons.Default.Add, contentDescription = "Add") }
-        },
-        floatingActionButtonPosition = FabPosition.Center
     ) { padding ->
 
         FancyGradientBackground {
@@ -111,7 +158,6 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         item {
-                            // ✅ BIG banner: date + AI-Report + tasks in ONE card
                             BigTasksBanner(
                                 tasksCount = tasksCount,
                                 todayLabel = todayLabel
@@ -134,29 +180,79 @@ fun DashboardScreen(
                             Spacer(Modifier.height(14.dp))
 
                             WeekChipsRow(
-                                selected = selectedDay,
-                                onSelect = { selectedDay = it }
+                                selectedDate = selectedDate,
+                                onSelect = { selectedDate = it }
                             )
 
-                            Spacer(Modifier.height(18.dp))
-                            SectionTitle(title = "Today's Plans", actionText = "View All")
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(24.dp))
                         }
 
-                        items(plans) { plan ->
-                            PlanCard(plan = plan)
-                            Spacer(Modifier.height(8.dp))
-                        }
-
+                        // ================= TODAY'S PLANS (WHITE CARD) =================
                         item {
-                            Spacer(Modifier.height(18.dp))
-                            SectionTitle(title = "Recent Expenses", actionText = "View All")
-                            Spacer(Modifier.height(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = Color.White,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(vertical = 16.dp)
+                            ) {
+                                Column {
+                                    SectionTitle(
+                                        title = selectedDate.dayOfWeek.toString() + " PLANS",
+                                    )
+
+                                    Spacer(Modifier.height(15.dp))
+
+                                    plans.forEach { plan ->
+                                        if (plan.dueDate.toLocalDate() == selectedDate) {
+                                            PlanCard(plan = plan)
+                                            Spacer(Modifier.height(8.dp))
+                                        }
+                                    }
+                                    Spacer(Modifier.height(15.dp))
+                                    Box(Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                        .background(Color.White, shape = RoundedCornerShape(4.dp))
+                                        .border(1.dp, color = Color(0xFFECECEC))
+                                    ){
+                                        TextButton(onClick = {}) { Text("View All Plans", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
+                                    }
+                                }
+                            }
                         }
 
-                        items(expenses) { ex ->
-                            ExpenseRow(item = ex)
-                            Spacer(Modifier.height(8.dp))
+                        // ================= TODAY'S EXPENSES (WHITE CARD) =================
+                        item {
+                            Spacer(Modifier.height(20.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = Color.White,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(vertical = 16.dp)
+                            ) {
+                                Column {
+                                    SectionTitle(
+                                        title = "Recent Expenses",
+                                    )
+
+                                    Spacer(Modifier.height(12.dp))
+
+                                    expenses.forEach { ex ->
+                                        ExpenseRow(item = ex)
+                                        Spacer(Modifier.height(8.dp))
+                                    }
+                                    TextButton(onClick = {}) { Text("View All Expenses", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
+                                }
+                            }
                         }
                     }
                 }
@@ -176,63 +272,133 @@ fun ExpenseRow(item: ExpenseItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.weight(1f)) {
+        // LEFT: title + date
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
-                item.title,
+                text = item.title,
+                fontFamily = interFamily,
                 fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = Color.Black
             )
-            Text(item.subtitle, fontSize = 12.sp, color = Color.Gray)
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = formatDate(item.date),
+                fontFamily = interFamily,
+                fontSize = 12.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.Light
+            )
         }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(item.amount, fontWeight = FontWeight.Bold, color = Color.Black)
-            Text(item.status, color = item.statusColor, fontSize = 11.sp)
+
+        // RIGHT: status + amount
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(15.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                border = BorderStroke(1.dp, item.status.color),
+                color = item.status.color.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = item.status.name.replace("_", " "),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    color = item.status.color,
+                    fontSize = 12.sp,
+                    fontFamily = interFamily,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Text(
+                text = "${item.amount}$",
+                fontFamily = interFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = if (item.income) Color(0xFF00A63E) else Color(0xFFA62700)
+            )
         }
     }
 }
 
+
 @Composable
-fun BottomNavBar() {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
+fun BottomNavBar(
+    onCenterClick: () -> Unit = {}
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
     ) {
-        NavigationBarItem(
-            selected = true,
-            onClick = {},
-            icon = { Icon(Icons.Default.Home, contentDescription = null) },
-            label = { Text("Home") }
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = {},
-            icon = { Icon(Icons.Default.DateRange, contentDescription = null) },
-            label = { Text("Plans") }
-        )
+        // The actual Navigation Bar
+        NavigationBar(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp),               // a bit taller like your screenshot
+            containerColor = Color.White,
+            tonalElevation = 8.dp
+        ) {
+            NavigationBarItem(
+                selected = true,
+                onClick = {},
+                icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                label = { Text("Home") }
+            )
+            NavigationBarItem(
+                selected = false,
+                onClick = {},
+                icon = { Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null) },
+                label = { Text("Tasks") }
+            )
 
-        Spacer(Modifier.width(48.dp)) // Space for FAB
+            // Empty slot in the middle so spacing stays correct
+            Spacer(modifier = Modifier.weight(1f))
 
-        NavigationBarItem(
-            selected = false,
-            onClick = {},
-            icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) },
-            label = { Text("Wallet") }
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = {},
-            icon = { Icon(Icons.Default.Person, contentDescription = null) },
-            label = { Text("Profile") }
-        )
+            NavigationBarItem(
+                selected = false,
+                onClick = {},
+                icon = { Icon(Icons.Default.AccessTime, contentDescription = null) },
+                label = { Text("History") }
+            )
+            NavigationBarItem(
+                selected = false,
+                onClick = {},
+                icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                label = { Text("Profile") }
+            )
+        }
+
+        // Center purple circle ABOVE the bar (won't be clipped)
+        FloatingActionButton(
+            onClick = onCenterClick,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = (-23).dp)  // lift it up
+                .zIndex(10f),          // force it in front
+            containerColor = Color(0xFF582FFF),
+            contentColor = Color.White,
+            shape = CircleShape
+        ) {
+            Image(painter = painterResource(id = R.drawable.qareeb),contentDescription = "Add",Modifier.size(30.dp))
+        }
     }
 }
 
+
+
 @Composable
-private fun SectionTitle(title: String, actionText: String) {
+private fun SectionTitle(title: String) {
     Row(
         modifier = Modifier
             .padding(horizontal = 16.dp)
@@ -241,7 +407,6 @@ private fun SectionTitle(title: String, actionText: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        TextButton(onClick = {}) { Text(actionText, color = Color(0xFF7C3AED)) }
     }
 }
 
@@ -327,7 +492,7 @@ fun BigTasksBanner(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(140.dp)     // change this if you want bigger/smaller
-                        .offset(x=25.dp),
+                        .offset(x = 25.dp),
                     contentScale = ContentScale.Fit
                 )
             }

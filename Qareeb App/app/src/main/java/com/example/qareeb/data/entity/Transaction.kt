@@ -1,5 +1,6 @@
 package com.example.qareeb.data.entity
 
+import android.R
 import androidx.room.*
 
 @Entity(
@@ -34,5 +35,7 @@ data class Transaction(
     val amount: Double,
     val date: Long = System.currentTimeMillis(),
     val source: String? = null,
-    val description: String? = null
+    val description: String? = null,
+    var income: Boolean,
+    var status: String = "pending"
 )

@@ -2,11 +2,14 @@ package com.example.qareeb.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -33,6 +36,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
 import androidx.compose.material3.Surface
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.TextStyle
+
 
 
 
@@ -43,8 +56,45 @@ val dmSansFamily = FontFamily(
     Font(R.font.dmsans_bold, FontWeight.Bold),
     Font(R.font.dmsans_extralight, weight = FontWeight.ExtraLight),
 )
-val interFamily= FontFamily(Font(R.font.inter_24pt_regular, FontWeight.Normal),
+val interFamily= FontFamily(
+    Font(R.font.inter_24pt_regular, FontWeight.Normal),
+    Font(R.font.inter_24pt_bold, FontWeight.Bold),
+    Font(R.font.inter_24pt_medium, FontWeight.Medium),
+    Font(R.font.inter_24pt_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_24pt_extrabold, FontWeight.ExtraBold),
+    Font(R.font.inter_24pt_light, FontWeight.Light),
     )
+
+data class DayItem(
+    val label: String,     // "Fri"
+    val date: LocalDate    // real date
+)
+enum class PlanStatus {
+    COMPLETED,
+    IN_PROGRESS,
+    POSTPONED
+}
+val PlanStatus.color: Color
+    get() = when (this) {
+        PlanStatus.COMPLETED -> Color(0xFF16A34A)   // green
+        PlanStatus.IN_PROGRESS -> Color(0xFF7C3AED) // purple
+        PlanStatus.POSTPONED -> Color(0xFFF97316)   // orange
+    }
+enum class TransactionStatus{
+    PENDING,
+    IN_PROGRESS,
+    COMPLETED,
+    DECLINED
+}
+val TransactionStatus.color: Color
+    get() = when (this) {
+        TransactionStatus.COMPLETED -> Color(0xFF16A34A)   // green
+        TransactionStatus.IN_PROGRESS -> Color(0xFF16A34A) // purple
+        TransactionStatus.DECLINED -> Color(0xFFA62700)   // orange
+        TransactionStatus.PENDING -> Color(0xFF7C3AED)
+
+    }
+
 
 @Composable
 fun FancyGradientBackground(content: @Composable () -> Unit) {
@@ -230,9 +280,11 @@ fun PlanCard(plan: PlanItem) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .border(2.dp,color= Color(0xFFE9D8FD), shape = RoundedCornerShape(4.dp)),
+            .border(2.dp,color= Color(0xFFE9D8FD), shape = RoundedCornerShape(4.dp))
+            .height(108.dp),
+
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF0E8FF)),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(4.dp)
 
     ) {
         Row(
@@ -240,42 +292,136 @@ fun PlanCard(plan: PlanItem) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(plan.title, fontFamily = , fontWeight = FontWeight.Bold, color = Color.Black)
-                Text(plan.time, fontSize = 12.sp, color = Color.Gray)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(painter = painterResource(id = R.drawable.checktask),
+                        contentDescription = null,
+                        Modifier.size(25.dp)
+                    )
+                    Text("TASK-"+plan.taskId, fontWeight = FontWeight.Light, color = Color(0xFF726B81))
+                    Spacer(Modifier.width(120.dp))
+                    Surface(
+                        border = BorderStroke(1.dp, plan.tag.color),
+                        color = plan.tag.color.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(9.dp)
+                    ) {
+                        Text(
+                            text = plan.tag.name.replace("_", " "),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            color = plan.tag.color,
+                            fontSize = 12.sp,
+                            fontFamily = interFamily
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(plan.title, fontFamily = interFamily,fontSize=16.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.weight(1f)) {
+                    Image(
+                        painter = painterResource(id = R.drawable.calendar),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = plan.dueDate?.let { formatDate(it) } ?: "No due date",
+                        fontSize = 12.sp,
+                        color = Color.Black,
+                        fontFamily = interFamily,
+                        fontWeight = FontWeight.Light
+                    )
+                }
+                }
             }
-            Surface(
-                border = BorderStroke(1.dp, plan.tagColor),
-                color = plan.tagColor.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(999.dp)
-            ) {
-                Text(
-                    plan.tag,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    color = plan.tagColor,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+
+
         }
     }
+
+@Composable
+fun DayCard(
+    dayLabel: String,
+    dayNumber: Int,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (selected) Color(0xFF6B46C1) else Color.White
+    val textColor = if (selected) Color.White else Color.Black
+    val dotColor = if (selected) Color(0xFF22D3EE) else Color(0xFF111827)
+
+    Column(
+        modifier = Modifier
+            .width(45.dp)
+            .height(86.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(backgroundColor)
+            .border(
+                width = if (selected) 0.dp else 1.dp,
+                color = Color(0xFFE5E7EB),
+                shape = RoundedCornerShape(18.dp)
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(dotColor, CircleShape)
+        )
+
+        Text(
+            text = dayLabel,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = textColor
+        )
+
+        Text(
+            text = dayNumber.toString(),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
+
+        Spacer(Modifier.height(8.dp))
+    }
 }
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WeekChipsRow(selected: String, onSelect: (String) -> Unit) {
-    val days = listOf("Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
+fun WeekChipsRow(
+    selectedDate: LocalDate,
+    onSelect: (LocalDate) -> Unit
+) {
+    val today = remember { LocalDate.now() }
+    val days = remember(today) { buildNext7DaysFromToday(today) }
+
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
     ) {
-        items(days) { day ->
-            FilterChip(
-                selected = day == selected,
-                onClick = { onSelect(day) },
-                label = { Text(day) }
+        items(days) { item ->
+            DayCard(
+                dayLabel = item.label,
+                dayNumber = item.date.dayOfMonth,     // ✅ real calendar day number
+                selected = item.date == selectedDate, // ✅ purple only when selected
+                onClick = { onSelect(item.date) }
             )
         }
     }
 }
+
+
+
+
 @Composable
 fun SearchBarStub() {
     OutlinedTextField(
@@ -286,17 +432,36 @@ fun SearchBarStub() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(15.dp),
+
+        shape = RoundedCornerShape(12.dp),
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         singleLine = true,
+
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color.Gray,     // 👈 outline when not focused
-            focusedBorderColor = Color.Gray,       // 👈 outline when focused
-            cursorColor = Color.Gray,
+            unfocusedBorderColor = Color(0xFFD6D6D6),     // 👈 outline when not focused
+            focusedBorderColor = Color(0xFFD6D6D6),
+            unfocusedContainerColor = Color(0xFFFAF5FF),// 👈 outline when not focused
+            focusedContainerColor = Color(0xFFFAF5FF),// 👈 outline when focused
+            cursorColor = Color(0xFFD6D6D6),
             focusedTextColor = Color.Black,
             unfocusedTextColor = Color.Black
         )
     )
+}
+fun buildNext7DaysFromToday(today: LocalDate): List<DayItem> {
+    return (0..6).map { i ->
+        val d = today.plusDays(i.toLong())
+        DayItem(
+            label = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH), // Fri, Sat...
+            date = d
+        )
+    }
+}
+
+
+fun formatDate(timestamp: Long): String {
+    val formatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    return formatter.format(Date(timestamp))
 }
 
 

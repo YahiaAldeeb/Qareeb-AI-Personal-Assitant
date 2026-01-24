@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.qareeb"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.qareeb"
@@ -30,56 +28,73 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildFeatures {
         compose = true
-        viewBinding = true // Keep this true if you use ViewBinding elsewhere, otherwise false
-    }
-    composeOptions {
-//        kotlinCompilerExtensionVersion = "1.5.1"
+        viewBinding = true
     }
 }
+
 dependencies {
+
+    /* ---------------- Core Android ---------------- */
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+
+    /* ---------------- Activity ---------------- */
+    implementation("androidx.activity:activity-compose:1.9.0")
+
+    /* ---------------- Compose (BOM) ---------------- */
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-text")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation(libs.androidx.foundation)
+
+    // REQUIRED for Preview / Design tab
+    debugImplementation("androidx.compose.ui:ui-tooling")
+
+    /* ---------------- Security (FIXES your error) ---------------- */
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    /* ---------------- Database (Room) ---------------- */
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    /* ---------------- Networking ---------------- */
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    /* ---------------- Coroutines ---------------- */
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    /* ---------------- AI / Animations ---------------- */
     implementation("ai.picovoice:porcupine-android:3.0.1")
     implementation("com.airbnb.android:lottie:6.1.0")
 
-    //Database
-    implementation("androidx.room:room-runtime:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
+    /* ---------------- Testing ---------------- */
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 
-    // Retrofit (The Networking Client)
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-
-    // OkHttp (Logging interceptor to see API calls in Logcat - VERY helpful)
-    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
-
-    // Coroutines (Jetpack's tool for background tasks)
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-
-
-    // Compose BOM (Bill of Materials) - manages versions
-    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.activity:activity-compose:1.7.2") // Vital for MainActivity
-
+    debugImplementation("androidx.compose.ui:ui-tooling")
 }
