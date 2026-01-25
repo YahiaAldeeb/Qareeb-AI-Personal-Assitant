@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.wav
+*.ppn
+trajectories/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+README*
+
+# Other server files (if not needed)
+server.py
+
+# Environment files (secrets)
+.env
+

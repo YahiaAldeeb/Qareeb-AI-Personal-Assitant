@@ -1,0 +1,14 @@
+# Audio (stable)
+sounddevice==0.4.6
+soundfile==0.12.1
+
+# Speech (stable)
+speechbrain==1.0.3
+openai-whisper==20250625
+pvporcupine==4.0.1
+
+# HuggingFace (SpeechBrain deps)
+huggingface_hub==0.16.4
+hyperpyyaml==1.2.3
+sentencepiece==0.1.99
+

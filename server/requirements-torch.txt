@@ -1,0 +1,5 @@
+# PyTorch (large, stable - install separately for better caching)
+# Note: These are installed via --index-url in Dockerfile, but listed here for reference
+# torch==2.0.1
+# torchaudio==2.0.2
+

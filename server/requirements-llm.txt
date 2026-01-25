@@ -1,0 +1,5 @@
+# LLM (most likely to change - install last for better caching)
+groq>=0.11.0
+llama-index>=0.10.0,<0.12.0
+droidrun
+
