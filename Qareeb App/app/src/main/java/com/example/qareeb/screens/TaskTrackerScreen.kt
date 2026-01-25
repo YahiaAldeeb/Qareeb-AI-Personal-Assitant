@@ -8,17 +8,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.R
 import com.example.qareeb.presentation.ui.components.BottomNavBar
 import com.example.qareeb.presentation.ui.components.CategoryChip
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 import com.example.qareeb.presentation.ui.components.PlanCard
 import com.example.qareeb.presentation.ui.components.SearchBarStub
+import com.example.qareeb.presentation.ui.components.TaskWelcomeBanner
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
 import com.example.qareeb.ui.theme.dmSansFamily
 import com.example.qareeb.utilis.toLocalDate
@@ -120,7 +124,7 @@ fun MyTasksScreen(
             Column(modifier = Modifier.fillMaxSize()) {
 
                 // Header
-                WelcomeBanner(username = username)
+                TaskWelcomeBanner(username = username)
 
                 // Main container
                 Box(
@@ -292,6 +296,9 @@ fun MyTasksScreen(
         }
     }
 }
+
+
+
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable

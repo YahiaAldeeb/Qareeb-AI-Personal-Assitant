@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.qareeb.screens.DashboardScreen
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
+import com.example.qareeb.screens.MyFinanceScreen
 import com.example.qareeb.screens.MyTasksScreen
 
 class MainActivity : ComponentActivity() {
@@ -43,7 +44,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             // This is your Compose UI Entry Point
             FancyGradientBackground {
-                MyTasksScreen()
+                MyFinanceScreen("Farida")
             }
         }
     }
