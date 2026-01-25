@@ -1,0 +1,27 @@
+Index: app/build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>plugins {\r\n    alias(libs.plugins.android.application)\r\n    alias(libs.plugins.kotlin.android)\r\n    alias(libs.plugins.compose.compiler)\r\n    id(\"org.jetbrains.kotlin.kapt\")\r\n}\r\n\r\nandroid {\r\n    namespace = \"com.example.qareeb\"\r\n    compileSdk {\r\n        version = release(36)\r\n    }\r\n\r\n    defaultConfig {\r\n        applicationId = \"com.example.qareeb\"\r\n        minSdk = 26\r\n        targetSdk = 36\r\n        versionCode = 1\r\n        versionName = \"1.0\"\r\n\r\n        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"\r\n    }\r\n\r\n    buildTypes {\r\n        release {\r\n            isMinifyEnabled = false\r\n            proguardFiles(\r\n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\r\n                \"proguard-rules.pro\"\r\n            )\r\n        }\r\n    }\r\n    compileOptions {\r\n        sourceCompatibility = JavaVersion.VERSION_11\r\n        targetCompatibility = JavaVersion.VERSION_11\r\n    }\r\n    kotlinOptions {\r\n        jvmTarget = \"11\"\r\n    }\r\n\r\n    buildFeatures {\r\n        compose = true\r\n        viewBinding = true // Keep this true if you use ViewBinding elsewhere, otherwise false\r\n    }\r\n    composeOptions {\r\n//        kotlinCompilerExtensionVersion = \"1.5.1\"\r\n    }\r\n}\r\ndependencies {\r\n    implementation(libs.androidx.core.ktx)\r\n    implementation(libs.androidx.appcompat)\r\n    implementation(libs.material)\r\n    implementation(libs.androidx.activity)\r\n    implementation(libs.androidx.constraintlayout)\r\n    testImplementation(libs.junit)\r\n    androidTestImplementation(libs.androidx.junit)\r\n    androidTestImplementation(libs.androidx.espresso.core)\r\n    implementation(\"ai.picovoice:porcupine-android:3.0.1\")\r\n    implementation(\"com.airbnb.android:lottie:6.1.0\")\r\n\r\n    //Database\r\n    implementation(\"androidx.room:room-runtime:2.6.1\")\r\n    kapt(\"androidx.room:room-compiler:2.6.1\")\r\n    implementation(\"androidx.room:room-ktx:2.6.1\")\r\n\r\n    // Retrofit (The Networking Client)\r\n    implementation(\"com.squareup.retrofit2:retrofit:2.9.0\")\r\n    implementation(\"com.squareup.retrofit2:converter-gson:2.9.0\")\r\n\r\n    // OkHttp (Logging interceptor to see API calls in Logcat - VERY helpful)\r\n    implementation(\"com.squareup.okhttp3:logging-interceptor:4.11.0\")\r\n\r\n    // Coroutines (Jetpack's tool for background tasks)\r\n    implementation(\"org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3\")\r\n\r\n\r\n\r\n    // Compose BOM (Bill of Materials) - manages versions\r\n    implementation(platform(\"androidx.compose:compose-bom:2023.08.00\"))\r\n    implementation(\"androidx.compose.ui:ui\")\r\n    implementation(\"androidx.compose.material3:material3\")\r\n    implementation(\"androidx.compose.ui:ui-tooling-preview\")\r\n    implementation(\"androidx.activity:activity-compose:1.7.2\") // Vital for MainActivity\r\n\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+--- a/app/build.gradle.kts	(revision b34ac8ad831a69b9d027eaabdb19462dbef567d6)
++++ b/app/build.gradle.kts	(date 1769022640599)
+@@ -82,4 +82,16 @@
+     implementation("androidx.compose.ui:ui-tooling-preview")
+     implementation("androidx.activity:activity-compose:1.7.2") // Vital for MainActivity
+ 
++    // EncryptedSharedPreferences + MasterKey
++    implementation("androidx.security:security-crypto:1.1.0-alpha06")
++    // Database (Room)
++    implementation("androidx.room:room-runtime:2.6.1")
++    implementation("androidx.room:room-ktx:2.6.1")
++    implementation("androidx.room:room-common:2.6.1")
++    kapt("androidx.room:room-compiler:2.6.1")
++
++// EncryptedSharedPreferences + MasterKey
++    implementation("androidx.security:security-crypto:1.1.0-alpha06")
++
++
+ }
