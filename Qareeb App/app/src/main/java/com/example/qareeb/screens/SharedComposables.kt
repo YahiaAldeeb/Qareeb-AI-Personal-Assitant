@@ -2,11 +2,14 @@ package com.example.qareeb.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -33,78 +36,43 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
 import androidx.compose.material3.Surface
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import com.example.qareeb.ui.theme.dmSansFamily
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.TextStyle
 
 
-// Font definition - shared throughout the app
-val dmSansFamily = FontFamily(
-    Font(R.font.dmsans_regular, FontWeight.Normal),
-    Font(R.font.dmsans_medium, FontWeight.Medium),
-    Font(R.font.dmsans_bold, FontWeight.Bold),
-    Font(R.font.dmsans_extralight, weight = FontWeight.ExtraLight),
-)
-
-@Composable
-fun FancyGradientBackground(content: @Composable () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // 1. Horizontal gradient background
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(Color(0xFF6B46C1), Color(0xFF2C7A7B))
-                    )
-                )
-        )
-
-        // 2. Stars overlay image
-        Image(
-            painter = painterResource(id = R.drawable.stars),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        Image(
-            painter = painterResource(id = R.drawable.stars),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        Image(
-            painter = painterResource(id = R.drawable.stars),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        Image(
-            painter = painterResource(id = R.drawable.stars),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        Image(
-            painter = painterResource(id = R.drawable.stars),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-
-        // 3. Vertical gradient fade to white at bottom
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.White),
-                        startY = 1100f
-                    )
-                )
-        )
-
-        // 4. Content on top
-        content()
-    }
+enum class PlanStatus {
+    COMPLETED,
+    IN_PROGRESS,
+    POSTPONED
 }
+val PlanStatus.color: Color
+    get() = when (this) {
+        PlanStatus.COMPLETED -> Color(0xFF16A34A)   // green
+        PlanStatus.IN_PROGRESS -> Color(0xFF7C3AED) // purple
+        PlanStatus.POSTPONED -> Color(0xFFF97316)   // orange
+    }
+enum class TransactionStatus{
+    PENDING,
+    IN_PROGRESS,
+    COMPLETED,
+    DECLINED
+}
+val TransactionStatus.color: Color
+    get() = when (this) {
+        TransactionStatus.COMPLETED -> Color(0xFF16A34A)   // green
+        TransactionStatus.IN_PROGRESS -> Color(0xFF16A34A) // purple
+        TransactionStatus.DECLINED -> Color(0xFFA62700)   // orange
+        TransactionStatus.PENDING -> Color(0xFF7C3AED)
+
+    }
 
 /**
  * Shared welcome banner composable
@@ -220,80 +188,5 @@ fun Pill(
             }
         }
     }
-}
-@Composable
-fun PlanCard(plan: PlanItem) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .border(2.dp,color= Color(0xFFE9D8FD), shape = RoundedCornerShape(4.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0E8FF)),
-        shape = RoundedCornerShape(16.dp)
-
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(plan.title, fontWeight = FontWeight.Bold, color = Color.Black)
-                Text(plan.time, fontSize = 12.sp, color = Color.Gray)
-            }
-            Surface(
-                border = BorderStroke(1.dp, plan.tagColor),
-                color = plan.tagColor.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(999.dp)
-            ) {
-                Text(
-                    plan.tag,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    color = plan.tagColor,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun WeekChipsRow(selected: String, onSelect: (String) -> Unit) {
-    val days = listOf("Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        //neghyaro l one ashann nekhlay thursday teban
-        horizontalArrangement = Arrangement.spacedBy(1.dp)
-    ) {
-        items(days) { day ->
-            FilterChip(
-                selected = day == selected,
-                onClick = { onSelect(day) },
-                label = { Text(day) }
-            )
-        }
-    }
-}
-@Composable
-fun SearchBarStub() {
-    OutlinedTextField(
-
-        value = "",
-        onValueChange = {},
-        placeholder = { Text("Search for Plans", color = Color.Gray) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(15.dp),
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        singleLine = true,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color.Gray,     // 👈 outline when not focused
-            focusedBorderColor = Color.Gray,       // 👈 outline when focused
-            cursorColor = Color.Gray,
-            focusedTextColor = Color.Black,
-            unfocusedTextColor = Color.Black
-        )
-    )
 }
 

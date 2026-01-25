@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,6 +18,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.presentation.ui.components.FancyGradientBackground
+import com.example.qareeb.presentation.ui.components.SearchBarStub
+import com.example.qareeb.presentation.ui.components.WeekChipsRow
+import com.example.qareeb.ui.theme.dmSansFamily
+import java.time.LocalDate
 
 data class PlanItem(
     val title: String,
@@ -30,7 +36,7 @@ data class PlanItem(
 fun MyTasksScreen() {
     var selectedDay by remember { mutableStateOf("Mon") }
     var selectedCategory by remember { mutableStateOf("All") }
-
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     val categories = listOf("All", "Work", "Sports", "Personal", "Travel")
 
     val todaysPlans = listOf(
@@ -154,8 +160,8 @@ fun MyTasksScreen() {
                         // Days of week selector - Using shared WeekChipsRow component
                         item {
                             WeekChipsRow(
-                                selected = selectedDay,
-                                onSelect = { selectedDay = it }
+                                selectedDate = selectedDate,
+                                onSelect = { selectedDate = it }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -220,6 +226,11 @@ fun MyTasksScreen() {
             }
         }
     }
+}
+
+@Composable
+fun PlanCard(plan: PlanItem) {
+    TODO("Not yet implemented")
 }
 
 // Category Chip Component the all work and those tags

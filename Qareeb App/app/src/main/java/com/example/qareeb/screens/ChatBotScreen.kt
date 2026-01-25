@@ -28,7 +28,9 @@ import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
 import com.example.qareeb.data.AppDatabase
 import com.example.qareeb.data.SessionManager
+import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 import com.example.qareeb.ui.theme.QareebTheme
+import com.example.qareeb.ui.theme.dmSansFamily
 
 class ChatBotScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
