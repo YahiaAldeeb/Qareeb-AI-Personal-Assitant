@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.qareeb.screens.DashboardScreen
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
+import com.example.qareeb.screens.MyTasksScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -41,12 +42,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             // This is your Compose UI Entry Point
-           FancyGradientBackground {
-               DashboardScreen("Manar","8 June 2025",9)
-           }
+            FancyGradientBackground {
+                MyTasksScreen()
+            }
         }
     }
-
     private fun checkPermissionsAndStart() {
         // 1. Check Overlay Permission (Special)
         if (!Settings.canDrawOverlays(this)) {
