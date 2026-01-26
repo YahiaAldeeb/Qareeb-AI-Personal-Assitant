@@ -117,8 +117,8 @@ class QareebOverlay(
             audioFile = recorder.startRecording()
 
             // 2. Start Animation
-            val micIcon = overlayView?.findViewById<ImageView>(R.id.iv_mic_icon)
-            if (micIcon != null) startBreathingAnimation(micIcon)
+           // val micIcon = overlayView?.findViewById<ImageView>(R.id.iv_mic_icon)
+           // if (micIcon != null) startBreathingAnimation(micIcon)
 
             // 3. Start Smart Logic
             // Initialize Timing Logic
@@ -138,12 +138,9 @@ class QareebOverlay(
     private fun dismissAndUpload() {
         mainHandler.post {
             isProcessing = true
-            mainHandler.removeCallbacks(monitorRunnable) // Stop monitoring
+            mainHandler.removeCallbacks(monitorRunnable)
 
             recorder.stopRecording()
-
-            val statusText = overlayView?.findViewById<TextView>(R.id.tv_overlay_status)
-            statusText?.text = "Thinking..."
 
             if (audioFile != null && audioFile!!.exists()) {
                 uploadAudioToServer(audioFile!!)
@@ -153,27 +150,28 @@ class QareebOverlay(
         }
     }
 
+
     // ... (Keep uploadAudioToServer, closeOverlay, startBreathingAnimation, createLayoutParams exactly as before) ...
 
     private fun uploadAudioToServer(file: File) {
-        val statusText = overlayView?.findViewById<TextView>(R.id.tv_overlay_status)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val requestFile = file.asRequestBody("audio/mp3".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
-                val response = NetworkModule.api.uploadAudio(body)
+
+                NetworkModule.api.uploadAudio(body)
+
                 withContext(Dispatchers.Main) {
-                    statusText?.text = "Command: ${response.command}"
                     mainHandler.postDelayed({ closeOverlay() }, 3000)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    statusText?.text = "Error"
                     mainHandler.postDelayed({ closeOverlay() }, 3000)
                 }
             }
         }
     }
+
 
     private fun closeOverlay() {
         // 1. Remove the View immediately (Visual feedback)
@@ -209,7 +207,7 @@ class QareebOverlay(
 
     private fun createLayoutParams(): WindowManager.LayoutParams {
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
