@@ -2,6 +2,12 @@ package com.example.qareeb.data.entity
 
 import androidx.room.*
 
+enum class TaskStatus {
+    COMPLETED,
+    POSTPONED,
+    PENDING,
+    IN_PROGRESS
+}
 @Entity(
     tableName = "task",
     foreignKeys = [
@@ -24,7 +30,7 @@ data class Task(
 
     val title: String,
     val description: String? = null,
-    val status: String = "pending",
+    val status: TaskStatus = TaskStatus.PENDING,
 
     @ColumnInfo(name = "progress_percentage")
     val progressPercentage: Int = 0,

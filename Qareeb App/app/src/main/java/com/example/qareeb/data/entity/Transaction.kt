@@ -2,6 +2,13 @@ package com.example.qareeb.data.entity
 
 import androidx.room.*
 
+
+enum class TransactionState {
+    COMPLETED,
+    DECLINED,
+    PENDING,
+    IN_PROGRESS
+}
 @Entity(
     tableName = "transaction",
     foreignKeys = [
@@ -34,5 +41,11 @@ data class Transaction(
     val amount: Double,
     val date: Long = System.currentTimeMillis(),
     val source: String? = null,
-    val description: String? = null
+    val description: String? = null,
+
+    // true = income (green), false = outcome/expense (red)
+    val income: Boolean = false,
+
+    // Transaction state using enum: "completed", "declined", "pending", "in_progress"
+    val state: TransactionState = TransactionState.PENDING
 )
