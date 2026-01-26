@@ -22,8 +22,8 @@ class QareebListeningService : Service() {
     private var porcupineManager: PorcupineManager? = null
     private val TAG = "QAREEB_DEBUG"
 
-    private val ACCESS_KEY = "BaoJLQKkfbjG+Xn4aYfa3altQ1tXbAgwCL1NFu2WEuti33cYmnM5JQ==" // Triple check this!
-    private val MODEL_FILENAME = "Hi-q_en_android_v3_0_0.ppn"
+    private val ACCESS_KEY = "iQ62IyjBMSfo1O45+N5mIKKGtkfhXbZNd5ujqWINW/ffLS8ptQebog==" // Triple check this!
+    private val MODEL_FILENAME = "hey-Q_en_android_v4_0_0.ppn"
 
     override fun onCreate() {
         super.onCreate()
@@ -43,7 +43,7 @@ class QareebListeningService : Service() {
         try {
             porcupineManager = PorcupineManager.Builder()
                 .setAccessKey(ACCESS_KEY)
-                .setKeywordPath("Hi-q_en_android_v3_0_0.ppn")
+                .setKeywordPath("hey-Q_en_android_v4_0_0.ppn")
                 .setSensitivity(0.7f)
                 .build(applicationContext) { keywordIndex ->
                     if (keywordIndex == 0) {
