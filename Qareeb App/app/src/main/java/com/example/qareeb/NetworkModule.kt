@@ -11,7 +11,7 @@ object NetworkModule {
     // ⚠️ TODO: REPLACE WITH YOUR PC'S IP ADDRESS (Run 'ipconfig' or 'ifconfig')
     // Example: "http://192.168.1.15:8000/"
     // Do NOT use localhost.
-    private const val BASE_URL = "http://192.168.1.146:8000/"
+    private const val BASE_URL = "http://192.168.1.106:8000/"
 
     private val client = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)) // Logs API details
