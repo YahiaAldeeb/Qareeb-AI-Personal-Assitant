@@ -2,6 +2,7 @@ package com.example.qareeb.data.dao
 
 import androidx.room.*
 import com.example.qareeb.data.entity.Task
+import com.example.qareeb.data.entity.TaskStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -10,7 +11,7 @@ interface TaskDao {
     fun getTasksByUser(userId: Long): Flow<List<Task>>
 
     @Query("SELECT * FROM task WHERE user_id = :userId AND status = :status")
-    fun getTasksByStatus(userId: Long, status: String): Flow<List<Task>>
+    fun getTasksByStatus(userId: Long, status: TaskStatus): Flow<List<Task>>
 
     @Insert
     suspend fun insertTask(task: Task): Long
