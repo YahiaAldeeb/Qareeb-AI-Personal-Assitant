@@ -2,7 +2,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Bottom edge - Listening state (calm purple to blue) -->
-    <item android:height="6dp" android:gravity="bottom">
+    <item android:height="6dp" android:gravity="bottom" android:left="50dp" android:right="50dp">
         <shape>
             <gradient
                 android:type="linear"
@@ -13,7 +13,7 @@
     </item>
 
     <!-- Bottom edge glow - subtle -->
-    <item android:height="12dp" android:gravity="bottom">
+    <item android:height="12dp" android:gravity="bottom" android:left="50dp" android:right="50dp">
         <shape>
             <gradient
                 android:type="linear"
