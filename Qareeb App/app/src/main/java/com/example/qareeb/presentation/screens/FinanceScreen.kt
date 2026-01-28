@@ -19,15 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 import com.example.qareeb.presentation.ui.components.SearchBarStub
-import com.example.qareeb.presentation.theme.dmSansFamily
-import com.example.qareeb.presentation.ui.components.CardBackground
-import com.example.qareeb.presentation.ui.components.Pill
+import com.example.qareeb.ui.theme.dmSansFamily
 
 data class FinanceTask(
     val id: String,

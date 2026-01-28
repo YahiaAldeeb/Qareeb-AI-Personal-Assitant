@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 import com.example.qareeb.presentation.ui.components.SearchBarStub
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
-import com.example.qareeb.presentation.theme.dmSansFamily
+import com.example.qareeb.ui.theme.dmSansFamily
 import java.time.LocalDate
 
 data class PlanItem(
