@@ -8,15 +8,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.qareeb.R
 import com.example.qareeb.presentation.ui.components.BottomNavBar
 import com.example.qareeb.presentation.ui.components.CategoryChip
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
@@ -220,6 +217,10 @@ fun MyFinanceScreen(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .heightIn(min = 80.dp)
+                                                        .background(
+                                                            color = Color(0xFFEDE6FB),
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        )
                                                 ) {
                                                     ExpenseRow(item = expense)
                                                 }
@@ -280,6 +281,10 @@ fun MyFinanceScreen(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .heightIn(min = 80.dp)
+                                                        .background(
+                                                            color = Color(0xFFEDE6FB),
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        )
                                                 ) {
                                                     ExpenseRow(item = expense)
                                                 }
