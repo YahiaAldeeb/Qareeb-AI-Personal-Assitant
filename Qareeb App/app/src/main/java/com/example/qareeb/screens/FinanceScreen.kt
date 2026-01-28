@@ -1,6 +1,7 @@
 package com.example.qareeb.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,6 +21,7 @@ import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 import com.example.qareeb.presentation.ui.components.ExpenseRow
 import com.example.qareeb.presentation.ui.components.FinanceWelcomeBanner
 import com.example.qareeb.presentation.ui.components.SearchBarStub
+import com.example.qareeb.presentation.ui.components.TransactionBox
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
 import com.example.qareeb.ui.theme.dmSansFamily
 import com.example.qareeb.utilis.toLocalDate
@@ -35,8 +37,6 @@ data class ExpensesItem(
     val income: Boolean
 )
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyFinanceScreen(
@@ -45,7 +45,7 @@ fun MyFinanceScreen(
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedCategory by remember { mutableStateOf("All") }
 
-    val categories = listOf("All", "Pending", "Completed","Declined")
+    val categories = listOf("All", "Pending", "Completed", "Declined")
 
     val expenses = remember {
         listOf(
@@ -113,15 +113,11 @@ fun MyFinanceScreen(
         bottomBar = { BottomNavBar() }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
-
             // Gradient Background
-            FancyGradientBackground {
-                Box(modifier = Modifier.fillMaxSize())
-            }
+            FancyGradientBackground { Box(modifier = Modifier.fillMaxSize()) }
 
             // Content
             Column(modifier = Modifier.fillMaxSize()) {
-
                 // Header
                 FinanceWelcomeBanner(username = username)
 
@@ -173,63 +169,11 @@ fun MyFinanceScreen(
 
                         // Today's Transactions Box
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .background(
-                                        color = Color.White,
-                                        shape = RoundedCornerShape(20.dp)
-                                    )
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Today's Transactions",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Black,
-                                        fontFamily = dmSansFamily,
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            top = 16.dp,
-                                            bottom = 12.dp
-                                        )
-                                    )
-
-                                    Column(
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            end = 16.dp,
-                                            bottom = 16.dp
-                                        )
-                                    ) {
-                                        if (filteredTodayExpenses.isEmpty()) {
-                                            Text(
-                                                text = "No transactions for this day ✅",
-                                                fontSize = 14.sp,
-                                                color = Color.Gray,
-                                                fontFamily = dmSansFamily,
-                                                modifier = Modifier.padding(vertical = 12.dp)
-                                            )
-                                        } else {
-                                            filteredTodayExpenses.forEach { expense ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .heightIn(min = 80.dp)
-                                                        .background(
-                                                            color = Color(0xFFEDE6FB),
-                                                            shape = RoundedCornerShape(8.dp)
-                                                        )
-                                                ) {
-                                                    ExpenseRow(item = expense)
-                                                }
-                                                Spacer(modifier = Modifier.height(16.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            TransactionBox(
+                                title = "Today's Transactions",
+                                transactions = filteredTodayExpenses,
+                                emptyMessage = "No transactions for this day ✅"
+                            )
                         }
 
                         // Space between the two boxes
@@ -237,63 +181,11 @@ fun MyFinanceScreen(
 
                         // Tomorrow's Transactions Box
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .background(
-                                        color = Color.White,
-                                        shape = RoundedCornerShape(20.dp)
-                                    )
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Tomorrow's Transactions",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Black,
-                                        fontFamily = dmSansFamily,
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            top = 16.dp,
-                                            bottom = 12.dp
-                                        )
-                                    )
-
-                                    Column(
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            end = 16.dp,
-                                            bottom = 16.dp
-                                        )
-                                    ) {
-                                        if (filteredTomorrowExpenses.isEmpty()) {
-                                            Text(
-                                                text = "No transactions for tomorrow ✅",
-                                                fontSize = 14.sp,
-                                                color = Color.Gray,
-                                                fontFamily = dmSansFamily,
-                                                modifier = Modifier.padding(vertical = 12.dp)
-                                            )
-                                        } else {
-                                            filteredTomorrowExpenses.forEach { expense ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .heightIn(min = 80.dp)
-                                                        .background(
-                                                            color = Color(0xFFEDE6FB),
-                                                            shape = RoundedCornerShape(8.dp)
-                                                        )
-                                                ) {
-                                                    ExpenseRow(item = expense)
-                                                }
-                                                Spacer(modifier = Modifier.height(16.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            TransactionBox(
+                                title = "Tomorrow's Transactions",
+                                transactions = filteredTomorrowExpenses,
+                                emptyMessage = "No transactions for tomorrow ✅"
+                            )
                         }
 
                         item { Spacer(modifier = Modifier.height(100.dp)) }
@@ -303,8 +195,6 @@ fun MyFinanceScreen(
         }
     }
 }
-
-
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
