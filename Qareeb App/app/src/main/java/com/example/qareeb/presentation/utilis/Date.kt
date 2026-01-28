@@ -1,4 +1,4 @@
-package com.example.qareeb.utilis
+package com.example.qareeb.presentation.utilis
 
 import java.text.SimpleDateFormat
 import java.time.Instant

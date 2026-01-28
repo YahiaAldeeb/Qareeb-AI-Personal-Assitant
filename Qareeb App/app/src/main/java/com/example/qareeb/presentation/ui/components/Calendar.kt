@@ -8,7 +8,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
-import com.example.qareeb.utilis.buildNext7DaysFromToday
+import com.example.qareeb.presentation.utilis.buildNext7DaysFromToday
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)

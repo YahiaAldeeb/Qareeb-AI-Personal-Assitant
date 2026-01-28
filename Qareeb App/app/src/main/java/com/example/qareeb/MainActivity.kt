@@ -23,8 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import com.example.qareeb.screens.DashboardScreen
+import com.example.qareeb.presentation.screens.DashboardScreen
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 
 class MainActivity : ComponentActivity() {

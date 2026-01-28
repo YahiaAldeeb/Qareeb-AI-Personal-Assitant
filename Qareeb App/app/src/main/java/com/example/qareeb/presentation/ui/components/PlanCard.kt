@@ -26,11 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
-import com.example.qareeb.data.entity.Task
 import com.example.qareeb.presentation.mapper.toUI
-import com.example.qareeb.screens.TaskUi
-import com.example.qareeb.utilis.formatDate
-import com.example.qareeb.ui.theme.interFamily
+import com.example.qareeb.presentation.screens.TaskUi
+import com.example.qareeb.presentation.utilis.formatDate
+import com.example.qareeb.presentation.theme.interFamily
 
 @Composable
 fun PlanCard(plan: TaskUi) {

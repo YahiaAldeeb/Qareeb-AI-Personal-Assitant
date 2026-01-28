@@ -1,25 +1,19 @@
-package com.example.qareeb.screens
+package com.example.qareeb.presentation.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,55 +23,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
-import androidx.compose.material3.Surface
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.runtime.remember
-import com.example.qareeb.ui.theme.dmSansFamily
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.format.TextStyle
+import com.example.qareeb.presentation.theme.dmSansFamily
 
-
-enum class PlanStatus {
-    COMPLETED,
-    IN_PROGRESS,
-    POSTPONED
-}
-val PlanStatus.color: Color
-    get() = when (this) {
-        PlanStatus.COMPLETED -> Color(0xFF16A34A)   // green
-        PlanStatus.IN_PROGRESS -> Color(0xFF7C3AED) // purple
-        PlanStatus.POSTPONED -> Color(0xFFF97316)   // orange
-    }
-enum class TransactionStatus{
-    PENDING,
-    IN_PROGRESS,
-    COMPLETED,
-    DECLINED
-}
-val TransactionStatus.color: Color
-    get() = when (this) {
-        TransactionStatus.COMPLETED -> Color(0xFF16A34A)   // green
-        TransactionStatus.IN_PROGRESS -> Color(0xFF16A34A) // purple
-        TransactionStatus.DECLINED -> Color(0xFFA62700)   // orange
-        TransactionStatus.PENDING -> Color(0xFF7C3AED)
-
-    }
-
-/**
- * Shared welcome banner composable
- * Used in both MainActivity and EntranceActivity
- */
 @Composable
 fun WelcomeBanner(username: String) {
     Row(
@@ -112,15 +63,15 @@ fun WelcomeBanner(username: String) {
 }
 @Composable
 fun CardBackground(modifier: Modifier = Modifier,
-                  cornerRadius: Int = 18,
-                  content: @Composable BoxScope.() -> Unit){
+                   cornerRadius: Int = 18,
+                   content: @Composable BoxScope.() -> Unit){
     val shape = RoundedCornerShape(cornerRadius.dp)
     Box(
         modifier = modifier
-        .clip(shape)
-        .background(brush = Brush.horizontalGradient(
-            colors = listOf(Color(0xFF6B46C1), Color(0xFF2C7A7B))
-        ))){
+            .clip(shape)
+            .background(brush = Brush.horizontalGradient(
+                colors = listOf(Color(0xFF6B46C1), Color(0xFF2C7A7B))
+            ))){
         Image(
             painter = painterResource(id = R.drawable.stars),
             contentDescription = null,
@@ -189,4 +140,3 @@ fun Pill(
         }
     }
 }
-

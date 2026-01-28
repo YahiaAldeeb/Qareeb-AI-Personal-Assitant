@@ -26,8 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
-import com.example.qareeb.screens.CardBackground
-import com.example.qareeb.screens.Pill
 
 @Composable
 fun BigTasksBanner(

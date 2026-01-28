@@ -1,4 +1,4 @@
-package com.example.qareeb.utilis
+package com.example.qareeb.presentation.utilis
 
 import android.content.Context
 import android.content.SharedPreferences

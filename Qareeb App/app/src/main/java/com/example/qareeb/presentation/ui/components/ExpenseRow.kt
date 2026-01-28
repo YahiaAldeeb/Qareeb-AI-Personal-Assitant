@@ -19,13 +19,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.qareeb.screens.ExpenseItem
-import com.example.qareeb.screens.color
-import com.example.qareeb.ui.theme.interFamily
-import com.example.qareeb.utilis.formatDate
+import com.example.qareeb.presentation.mapper.toUI
+import com.example.qareeb.presentation.screens.ExpenseItem
+import com.example.qareeb.presentation.theme.interFamily
+import com.example.qareeb.presentation.utilis.formatDate
 
 @Composable
 fun ExpenseRow(item: ExpenseItem) {
+    val stateUI = item.status.toUI()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -63,14 +64,14 @@ fun ExpenseRow(item: ExpenseItem) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                border = BorderStroke(1.dp, item.status.color),
-                color = item.status.color.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, stateUI.color),
+                color = stateUI.color.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text(
                     text = item.status.name.replace("_", " "),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    color = item.status.color,
+                    color = stateUI.color,
                     fontSize = 12.sp,
                     fontFamily = interFamily,
                     fontWeight = FontWeight.Medium

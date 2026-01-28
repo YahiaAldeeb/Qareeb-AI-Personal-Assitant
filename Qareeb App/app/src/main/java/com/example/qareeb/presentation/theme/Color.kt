@@ -1,4 +1,4 @@
-package com.example.qareeb.ui.theme
+package com.example.qareeb.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 

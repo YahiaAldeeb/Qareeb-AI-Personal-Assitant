@@ -1,7 +1,5 @@
-package com.example.qareeb.screens
+package com.example.qareeb.presentation.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -19,9 +17,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.qareeb.ui.theme.QareebTheme
+import com.example.qareeb.data.entity.TaskStatus
+import com.example.qareeb.data.entity.TransactionState
+import com.example.qareeb.presentation.theme.QareebTheme
 import java.time.LocalDate
-import com.example.qareeb.utilis.toLocalDate
+import com.example.qareeb.presentation.utilis.toLocalDate
 import com.example.qareeb.presentation.ui.components.BigTasksBanner
 import com.example.qareeb.presentation.ui.components.BottomNavBar
 import com.example.qareeb.presentation.ui.components.ExpenseRow
@@ -32,16 +32,18 @@ import com.example.qareeb.presentation.ui.components.PlanCard
 import com.example.qareeb.presentation.ui.components.SearchBarStub
 import com.example.qareeb.presentation.ui.components.SectionTitle
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
+import com.example.qareeb.presentation.ui.components.WelcomeBanner
+
 data class TaskUi(
     val taskId: Long,
     val title: String,
     val dueDate: Long?,
-    val status: com.example.qareeb.data.entity.TaskStatus // reuse your enum
+    val status: TaskStatus // reuse your enum
 )
 
 data class ExpenseItem(
     val title: String,
-    val status: TransactionStatus,
+    val status: TransactionState,
     val amount: Double,
     val date: Long = System.currentTimeMillis(),
     val source: String? = null,
@@ -59,40 +61,37 @@ fun DashboardScreen(
             TaskUi(
                 taskId = 1,
                 title = "Meeting at work",
-                status = com.example.qareeb.data.entity.TaskStatus.IN_PROGRESS,
+                status = TaskStatus.IN_PROGRESS,
                 dueDate = System.currentTimeMillis()
             ),
             TaskUi(
                 taskId = 2,
                 title = "Dinner with Ahmed",
-                status = com.example.qareeb.data.entity.TaskStatus.COMPLETED,
+                status = TaskStatus.COMPLETED,
                 dueDate = System.currentTimeMillis() + 86_400_000
             ),
             TaskUi(
                 taskId = 3,
                 title = "Tennis Training",
-                status = com.example.qareeb.data.entity.TaskStatus.POSTPONED,
+                status = TaskStatus.POSTPONED,
                 dueDate = System.currentTimeMillis() + 2 * 86_400_000
             )
         )
     }
 
 
-
-
-
     val expenses = remember {
         listOf(
             ExpenseItem(
                 title = "Expert Consultation",
-                status = TransactionStatus.COMPLETED,
+                status = TransactionState.COMPLETED,
                 amount = 150.00,
                 date = 1704067200000L,// 01 Jan 2024 (example timestamp),
                 income=false
             ),
             ExpenseItem(
                 title = "Office Supplies",
-                status = TransactionStatus.DECLINED,
+                status = TransactionState.DECLINED,
 
                 amount = 45.00,
                 date = 1704067200000L,
@@ -100,7 +99,7 @@ fun DashboardScreen(
             ),
             ExpenseItem(
                 title = "Website Redesign",
-                status = TransactionStatus.IN_PROGRESS,
+                status = TransactionState.IN_PROGRESS,
 
                 amount = 2500.00,
                 date = 1704067200000L,
@@ -203,7 +202,7 @@ fun DashboardScreen(
                                         .background(Color.White, shape = RoundedCornerShape(4.dp))
                                         .border(1.dp, color = Color(0xFFECECEC))
                                     ){
-                                        TextButton(onClick = {}) { Text("View All Plans", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
+                                        TextButton(onClick = {},modifier = Modifier.fillMaxWidth()) { Text("View All Plans", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
                                     }
                                 }
                             }
@@ -234,7 +233,8 @@ fun DashboardScreen(
                                         ExpenseRow(item = ex)
                                         Spacer(Modifier.height(8.dp))
                                     }
-                                    TextButton(onClick = {}) { Text("View All Expenses", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
+                                    TextButton(onClick = { /* Handle click */ },
+                                        modifier = Modifier.fillMaxWidth()) { Text("View All Expenses", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
                                 }
                             }
                         }
