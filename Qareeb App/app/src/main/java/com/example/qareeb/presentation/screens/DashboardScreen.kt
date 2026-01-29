@@ -23,12 +23,10 @@ import com.example.qareeb.presentation.theme.QareebTheme
 import java.time.LocalDate
 import com.example.qareeb.presentation.utilis.toLocalDate
 import com.example.qareeb.presentation.ui.components.BigTasksBanner
-import com.example.qareeb.presentation.ui.components.BottomNavBar
 import com.example.qareeb.presentation.ui.components.ExpenseRow
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 import com.example.qareeb.presentation.ui.components.MiniCardCompleted
 import com.example.qareeb.presentation.ui.components.MiniCardPriority
-import com.example.qareeb.presentation.ui.components.PlanCard
 import com.example.qareeb.presentation.ui.components.SearchBarStub
 import com.example.qareeb.presentation.ui.components.SectionTitle
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
@@ -115,7 +113,7 @@ fun DashboardScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
-        bottomBar = { BottomNavBar() },
+        //bottomBar = { BottomNavBar() },
     ) { padding ->
 
         FancyGradientBackground {
@@ -191,7 +189,7 @@ fun DashboardScreen(
 
                                     plans.forEach { plan ->
                                         if (plan.dueDate?.toLocalDate() == selectedDate) {
-                                            PlanCard(plan = plan)
+                                            //PlanCard(plan = plan)
                                             Spacer(Modifier.height(8.dp))
                                         }
                                     }
@@ -230,7 +228,7 @@ fun DashboardScreen(
                                     Spacer(Modifier.height(12.dp))
 
                                     expenses.forEach { ex ->
-                                        ExpenseRow(item = ex)
+                                        //ExpenseRow(item = ex)
                                         Spacer(Modifier.height(8.dp))
                                     }
                                     TextButton(onClick = { /* Handle click */ },

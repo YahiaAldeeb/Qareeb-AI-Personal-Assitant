@@ -10,7 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.qareeb.ui.theme.dmSansFamily
+import com.example.qareeb.presentation.theme.dmSansFamily
+
 
 @Composable
 fun CategoryChip(

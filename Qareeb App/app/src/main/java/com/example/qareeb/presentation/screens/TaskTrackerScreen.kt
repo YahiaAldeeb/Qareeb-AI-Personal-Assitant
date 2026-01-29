@@ -1,147 +1,137 @@
-package com.example.qareeb.presentation.screens
+package com.example.qareeb.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.R
+import com.example.qareeb.presentation.theme.dmSansFamily
+import com.example.qareeb.presentation.ui.components.BottomNavBar
+import com.example.qareeb.presentation.ui.components.CategoryChip
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
+import com.example.qareeb.presentation.ui.components.PlanCard
 import com.example.qareeb.presentation.ui.components.SearchBarStub
+import com.example.qareeb.presentation.ui.components.TaskWelcomeBanner
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
-import com.example.qareeb.ui.theme.dmSansFamily
+import com.example.qareeb.presentation.utilis.toLocalDate
 import java.time.LocalDate
 
-data class PlanItem(
+data class TasksUi(
+    val taskId: Long,
     val title: String,
-    val time: String,
-    val tag: String,
-    val tagColor: Color
+    val dueDate: Long?,
+    val status: com.example.qareeb.data.entity.TaskStatus
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyTasksScreen() {
-    var selectedDay by remember { mutableStateOf("Mon") }
-    var selectedCategory by remember { mutableStateOf("All") }
+fun MyTasksScreen(
+    username: String = "Farida"
+) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedCategory by remember { mutableStateOf("All") }
+
     val categories = listOf("All", "Work", "Sports", "Personal", "Travel")
 
-    val todaysPlans = listOf(
-        PlanItem(
-            title = "Meeting at work",
-            time = "2025-06-01",
-            tag = "Work",
-            tagColor = Color(0xFF805AD5)
-        ),
-        PlanItem(
-            title = "Dinner with Ahmed",
-            time = "2025-08-04",
-            tag = "High",
-            tagColor = Color(0xFFE53E3E)
-        ),
-        PlanItem(
-            title = "Tennis Training",
-            time = "2025-05-01",
-            tag = "Sports",
-            tagColor = Color(0xFF805AD5)
+    val todaysPlans = remember {
+        listOf(
+            TasksUi(
+                taskId = 1,
+                title = "Meeting at work",
+                status = com.example.qareeb.data.entity.TaskStatus.IN_PROGRESS,
+                dueDate = System.currentTimeMillis()
+            ),
+            TasksUi(
+                taskId = 2,
+                title = "Dinner with Ahmed",
+                status = com.example.qareeb.data.entity.TaskStatus.POSTPONED,
+                dueDate = System.currentTimeMillis()
+            ),
+            TasksUi(
+                taskId = 3,
+                title = "Tennis Training",
+                status = com.example.qareeb.data.entity.TaskStatus.COMPLETED,
+                dueDate = System.currentTimeMillis()
+            )
         )
-    )
+    }
 
-    val tomorrowsPlans = listOf(
-        PlanItem(
-            title = "Meeting at work",
-            time = "2025-06-01",
-            tag = "Work",
-            tagColor = Color(0xFF805AD5)
-        ),
-        PlanItem(
-            title = "Dinner with Ahmed",
-            time = "2025-08-04",
-            tag = "Expense",
-            tagColor = Color(0xFFE53E3E)
-        ),
-        PlanItem(
-            title = "Tennis Training",
-            time = "2025-05-01",
-            tag = "Sports",
-            tagColor = Color(0xFF805AD5)
+    val tomorrowsPlans = remember {
+        listOf(
+            TasksUi(
+                taskId = 4,
+                title = "Meeting at work",
+                status = com.example.qareeb.data.entity.TaskStatus.IN_PROGRESS,
+                dueDate = System.currentTimeMillis() + 86_400_000
+            ),
+            TasksUi(
+                taskId = 5,
+                title = "Dinner with Ahmed",
+                status = com.example.qareeb.data.entity.TaskStatus.COMPLETED,
+                dueDate = System.currentTimeMillis() + 86_400_000
+            ),
+            TasksUi(
+                taskId = 6,
+                title = "Tennis Training",
+                status = com.example.qareeb.data.entity.TaskStatus.POSTPONED,
+                dueDate = System.currentTimeMillis() + 86_400_000
+            )
         )
-    )
+    }
+
+    // ✅ This is the logic you want:
+    // - Today's box shows tasks for selectedDate
+    // - Tomorrow's box shows tasks for selectedDate + 1
+    val todayDate = selectedDate
+    val tomorrowDate = selectedDate.plusDays(1)
+
+    val filteredTodaysPlans = remember(selectedDate, todaysPlans, tomorrowsPlans) {
+        (todaysPlans + tomorrowsPlans).filter { plan ->
+            plan.dueDate?.toLocalDate() == todayDate
+        }
+    }
+
+    val filteredTomorrowsPlans = remember(selectedDate, todaysPlans, tomorrowsPlans) {
+        (todaysPlans + tomorrowsPlans).filter { plan ->
+            plan.dueDate?.toLocalDate() == tomorrowDate
+        }
+    }
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar()
-        }
+        containerColor = Color.Transparent,
+        //bottomBar = { BottomNavBar() }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // Gradient Background - Using shared component
+
+            // Gradient Background
             FancyGradientBackground {
                 Box(modifier = Modifier.fillMaxSize())
             }
 
             // Content
             Column(modifier = Modifier.fillMaxSize()) {
-                // Header Section (on gradient)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 50.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "My Tasks",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                fontFamily = dmSansFamily
-                            )
-                            Text(
-                                text = "All your plans and tasks in one place!",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontFamily = dmSansFamily
-                            )
-                        }
-                        // Notification icon
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("🔔", fontSize = 18.sp)
-                        }
-                    }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-                }
+                // Header
+                TaskWelcomeBanner(username = username)
 
-                // White rounded box containing search bar and content
+                // Main container
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            color = Color.White,
+                            color = Color(0xFFEDF2F7),
                             shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
                         )
                 ) {
@@ -149,15 +139,14 @@ fun MyTasksScreen() {
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues)
-                            .padding(top = 20.dp)
                     ) {
-                        // Search Bar - Using shared SearchBarStub component
+                        // Search Bar
                         item {
                             SearchBarStub()
                             Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        // Days of week selector - Using shared WeekChipsRow component
+                        // Week chips
                         item {
                             WeekChipsRow(
                                 selectedDate = selectedDate,
@@ -183,44 +172,124 @@ fun MyTasksScreen() {
                             Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        // Today's Plans Section
+                        // ✅ Today's Plans Box (selectedDate)
                         item {
-                            Text(
-                                text = "Today's Plans",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black,
-                                fontFamily = dmSansFamily,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .background(
+                                        color = Color.White,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Today's Plans",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black,
+                                        fontFamily = dmSansFamily,
+                                        modifier = Modifier.padding(
+                                            start = 16.dp,
+                                            top = 16.dp,
+                                            bottom = 12.dp
+                                        )
+                                    )
+
+                                    Column(
+                                        modifier = Modifier.padding(
+                                            start = 16.dp,
+                                            end = 16.dp,
+                                            bottom = 16.dp
+                                        )
+                                    ) {
+                                        if (filteredTodaysPlans.isEmpty()) {
+                                            Text(
+                                                text = "No tasks for this day ✅",
+                                                fontSize = 14.sp,
+                                                color = Color.Gray,
+                                                fontFamily = dmSansFamily,
+                                                modifier = Modifier.padding(vertical = 12.dp)
+                                            )
+                                        } else {
+                                            filteredTodaysPlans.forEach { plan ->
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .heightIn(min = 110.dp)
+                                                ) {
+                                                    PlanCard(plan = plan)
+                                                }
+                                                Spacer(modifier = Modifier.height(16.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
-                        items(todaysPlans) { plan ->
-                            PlanCard(plan = plan)
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
+                        // Space between the two boxes
+                        item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                        // Tomorrow's Plans Section
+                        // ✅ Tomorrow's Plans Box (selectedDate + 1)
                         item {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Tomorrow's Plans",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black,
-                                fontFamily = dmSansFamily,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .background(
+                                        color = Color.White,
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Tomorrow's Plans",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black,
+                                        fontFamily = dmSansFamily,
+                                        modifier = Modifier.padding(
+                                            start = 16.dp,
+                                            top = 16.dp,
+                                            bottom = 12.dp
+                                        )
+                                    )
+
+                                    Column(
+                                        modifier = Modifier.padding(
+                                            start = 16.dp,
+                                            end = 16.dp,
+                                            bottom = 16.dp
+                                        )
+                                    ) {
+                                        if (filteredTomorrowsPlans.isEmpty()) {
+                                            Text(
+                                                text = "No tasks for tomorrow ✅",
+                                                fontSize = 14.sp,
+                                                color = Color.Gray,
+                                                fontFamily = dmSansFamily,
+                                                modifier = Modifier.padding(vertical = 12.dp)
+                                            )
+                                        } else {
+                                            filteredTomorrowsPlans.forEach { plan ->
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .heightIn(min = 110.dp)
+                                                ) {
+                                                    PlanCard(plan = plan)
+                                                }
+                                                Spacer(modifier = Modifier.height(16.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
-                        items(tomorrowsPlans) { plan ->
-                            PlanCard(plan = plan)
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(100.dp))
-                        }
+                        item { Spacer(modifier = Modifier.height(100.dp)) }
                     }
                 }
             }
@@ -228,38 +297,11 @@ fun MyTasksScreen() {
     }
 }
 
-@Composable
-fun PlanCard(plan: PlanItem) {
-    TODO("Not yet implemented")
-}
 
-// Category Chip Component the all work and those tags
-@Composable
-fun CategoryChip(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF805AD5),
-        modifier = Modifier
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            fontFamily = dmSansFamily
-        )
-    }
-}
 
-// PREVIEW FUNCTION - This allows you to see the screen without running the app
+
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun MyTasksScreenPreview() {
-    MyTasksScreen()
+    MyTasksScreen(username = "Farida")
 }

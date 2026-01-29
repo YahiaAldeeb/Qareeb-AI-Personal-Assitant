@@ -30,9 +30,10 @@ import com.example.qareeb.presentation.mapper.toUI
 import com.example.qareeb.presentation.screens.TaskUi
 import com.example.qareeb.presentation.utilis.formatDate
 import com.example.qareeb.presentation.theme.interFamily
+import com.example.qareeb.screens.TasksUi
 
 @Composable
-fun PlanCard(plan: TaskUi) {
+fun PlanCard(plan: TasksUi) {
     val stateUI = plan.status.toUI()
     Card(
         modifier = Modifier

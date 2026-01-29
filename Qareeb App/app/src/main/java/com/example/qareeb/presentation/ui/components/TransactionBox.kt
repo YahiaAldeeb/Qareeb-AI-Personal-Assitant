@@ -1,14 +1,7 @@
 package com.example.qareeb.presentation.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,14 +10,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.qareeb.screens.ExpenseItem
-import com.example.qareeb.ui.theme.dmSansFamily
-import kotlin.collections.forEach
+import com.example.qareeb.presentation.theme.dmSansFamily
+import com.example.qareeb.screens.ExpensesItem
+
 
 @Composable
 fun TransactionBox(
     title: String,
-    transactions: List<ExpenseItem>,
+    transactions: List<ExpensesItem>,
     emptyMessage: String
 ) {
     Box(
@@ -71,12 +64,6 @@ fun TransactionBox(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 80.dp)
-                                .border(
-                                    width = 1.dp,
-                                    color = Color(0xFFD6C6F5), // slightly darker purple
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-
                                 .background(
                                     color = Color(0xFFEDE6FB),
                                     shape = RoundedCornerShape(8.dp)

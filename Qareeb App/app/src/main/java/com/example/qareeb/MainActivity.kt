@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.presentation.MainScaffold
 import com.example.qareeb.presentation.screens.DashboardScreen
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
 import com.example.qareeb.screens.MyFinanceScreen
@@ -42,9 +43,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             // This is your Compose UI Entry Point
-            FancyGradientBackground {
-                MyFinanceScreen("Farida")
-            }
+            MainScaffold()
+
+//            FancyGradientBackground {
+//                MyFinanceScreen("Farida")
+//            }
         }
     }
     private fun checkPermissionsAndStart() {

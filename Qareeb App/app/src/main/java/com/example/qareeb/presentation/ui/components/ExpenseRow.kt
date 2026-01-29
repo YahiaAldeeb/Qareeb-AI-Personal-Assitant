@@ -20,12 +20,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.presentation.mapper.toUI
-import com.example.qareeb.presentation.screens.ExpenseItem
 import com.example.qareeb.presentation.theme.interFamily
 import com.example.qareeb.presentation.utilis.formatDate
+import com.example.qareeb.screens.ExpensesItem
 
 @Composable
-fun ExpenseRow(item: ExpenseItem) {
+fun ExpenseRow(item: ExpensesItem) {
     val stateUI = item.status.toUI()
     Row(
         modifier = Modifier
