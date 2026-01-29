@@ -6,22 +6,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.qareeb.R
+import com.example.qareeb.data.entity.TaskStatus
 import com.example.qareeb.presentation.theme.dmSansFamily
-import com.example.qareeb.presentation.ui.components.BottomNavBar
 import com.example.qareeb.presentation.ui.components.CategoryChip
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
-import com.example.qareeb.presentation.ui.components.PlanCard
+import com.example.qareeb.presentation.ui.components.PlanCardTask
 import com.example.qareeb.presentation.ui.components.SearchBarStub
 import com.example.qareeb.presentation.ui.components.TaskWelcomeBanner
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
@@ -32,7 +30,7 @@ data class TasksUi(
     val taskId: Long,
     val title: String,
     val dueDate: Long?,
-    val status: com.example.qareeb.data.entity.TaskStatus
+    val status: TaskStatus
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,260 +43,232 @@ fun MyTasksScreen(
 
     val categories = listOf("All", "Work", "Sports", "Personal", "Travel")
 
-    val todaysPlans = remember {
-        listOf(
-            TasksUi(
-                taskId = 1,
-                title = "Meeting at work",
-                status = com.example.qareeb.data.entity.TaskStatus.IN_PROGRESS,
-                dueDate = System.currentTimeMillis()
-            ),
-            TasksUi(
-                taskId = 2,
-                title = "Dinner with Ahmed",
-                status = com.example.qareeb.data.entity.TaskStatus.POSTPONED,
-                dueDate = System.currentTimeMillis()
-            ),
-            TasksUi(
-                taskId = 3,
-                title = "Tennis Training",
-                status = com.example.qareeb.data.entity.TaskStatus.COMPLETED,
-                dueDate = System.currentTimeMillis()
+
+    var todaysPlans by remember {
+        mutableStateOf(
+            listOf(
+                TasksUi(
+                    taskId = 1,
+                    title = "Meeting at work",
+                    status = TaskStatus.IN_PROGRESS,
+                    dueDate = System.currentTimeMillis()
+                ),
+                TasksUi(
+                    taskId = 2,
+                    title = "Dinner with Ahmed",
+                    status = TaskStatus.POSTPONED,
+                    dueDate = System.currentTimeMillis()
+                ),
+                TasksUi(
+                    taskId = 3,
+                    title = "Tennis Training",
+                    status = TaskStatus.COMPLETED,
+                    dueDate = System.currentTimeMillis()
+                )
             )
         )
     }
 
-    val tomorrowsPlans = remember {
-        listOf(
-            TasksUi(
-                taskId = 4,
-                title = "Meeting at work",
-                status = com.example.qareeb.data.entity.TaskStatus.IN_PROGRESS,
-                dueDate = System.currentTimeMillis() + 86_400_000
-            ),
-            TasksUi(
-                taskId = 5,
-                title = "Dinner with Ahmed",
-                status = com.example.qareeb.data.entity.TaskStatus.COMPLETED,
-                dueDate = System.currentTimeMillis() + 86_400_000
-            ),
-            TasksUi(
-                taskId = 6,
-                title = "Tennis Training",
-                status = com.example.qareeb.data.entity.TaskStatus.POSTPONED,
-                dueDate = System.currentTimeMillis() + 86_400_000
+    var tomorrowsPlans by remember {
+        mutableStateOf(
+            listOf(
+                TasksUi(
+                    taskId = 4,
+                    title = "Meeting at work",
+                    status = TaskStatus.IN_PROGRESS,
+                    dueDate = System.currentTimeMillis() + 86_400_000
+                ),
+                TasksUi(
+                    taskId = 5,
+                    title = "Dinner with Ahmed",
+                    status = TaskStatus.COMPLETED,
+                    dueDate = System.currentTimeMillis() + 86_400_000
+                ),
+                TasksUi(
+                    taskId = 6,
+                    title = "Tennis Training",
+                    status = TaskStatus.POSTPONED,
+                    dueDate = System.currentTimeMillis() + 86_400_000
+                )
             )
         )
     }
 
-    // ✅ This is the logic you want:
-    // - Today's box shows tasks for selectedDate
-    // - Tomorrow's box shows tasks for selectedDate + 1
+    // Dates
     val todayDate = selectedDate
     val tomorrowDate = selectedDate.plusDays(1)
 
-    val filteredTodaysPlans = remember(selectedDate, todaysPlans, tomorrowsPlans) {
-        (todaysPlans + tomorrowsPlans).filter { plan ->
-            plan.dueDate?.toLocalDate() == todayDate
-        }
+
+    val allPlans = todaysPlans + tomorrowsPlans
+
+    val filteredTodaysPlans = remember(selectedDate, allPlans) {
+        allPlans.filter { plan -> plan.dueDate?.toLocalDate() == todayDate }
     }
 
-    val filteredTomorrowsPlans = remember(selectedDate, todaysPlans, tomorrowsPlans) {
-        (todaysPlans + tomorrowsPlans).filter { plan ->
-            plan.dueDate?.toLocalDate() == tomorrowDate
-        }
+    val filteredTomorrowsPlans = remember(selectedDate, allPlans) {
+        allPlans.filter { plan -> plan.dueDate?.toLocalDate() == tomorrowDate }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        //bottomBar = { BottomNavBar() }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
 
-            // Gradient Background
-            FancyGradientBackground {
-                Box(modifier = Modifier.fillMaxSize())
-            }
+    val onStatusChange: (TasksUi, TaskStatus) -> Unit = { oldPlan, newStatus ->
+        todaysPlans = todaysPlans.map { if (it.taskId == oldPlan.taskId) it.copy(status = newStatus) else it }
+        tomorrowsPlans = tomorrowsPlans.map { if (it.taskId == oldPlan.taskId) it.copy(status = newStatus) else it }
+    }
 
-            // Content
-            Column(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
 
-                // Header
-                TaskWelcomeBanner(username = username)
+        FancyGradientBackground { Box(modifier = Modifier.fillMaxSize()) }
 
-                // Main container
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            color = Color(0xFFEDF2F7),
-                            shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
-                        )
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            TaskWelcomeBanner(username = username)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = Color(0xFFEDF2F7),
+                        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+                    )
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                    ) {
-                        // Search Bar
-                        item {
-                            SearchBarStub()
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
-
-                        // Week chips
-                        item {
-                            WeekChipsRow(
-                                selectedDate = selectedDate,
-                                onSelect = { selectedDate = it }
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-
-                        // Category filters
-                        item {
-                            LazyRow(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(categories) { category ->
-                                    CategoryChip(
-                                        text = category,
-                                        isSelected = category == selectedCategory,
-                                        onClick = { selectedCategory = category }
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
-
-                        // ✅ Today's Plans Box (selectedDate)
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .background(
-                                        color = Color.White,
-                                        shape = RoundedCornerShape(20.dp)
-                                    )
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Today's Plans",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Black,
-                                        fontFamily = dmSansFamily,
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            top = 16.dp,
-                                            bottom = 12.dp
-                                        )
-                                    )
-
-                                    Column(
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            end = 16.dp,
-                                            bottom = 16.dp
-                                        )
-                                    ) {
-                                        if (filteredTodaysPlans.isEmpty()) {
-                                            Text(
-                                                text = "No tasks for this day ✅",
-                                                fontSize = 14.sp,
-                                                color = Color.Gray,
-                                                fontFamily = dmSansFamily,
-                                                modifier = Modifier.padding(vertical = 12.dp)
-                                            )
-                                        } else {
-                                            filteredTodaysPlans.forEach { plan ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .heightIn(min = 110.dp)
-                                                ) {
-                                                    PlanCard(plan = plan)
-                                                }
-                                                Spacer(modifier = Modifier.height(16.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Space between the two boxes
-                        item { Spacer(modifier = Modifier.height(24.dp)) }
-
-                        // ✅ Tomorrow's Plans Box (selectedDate + 1)
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .background(
-                                        color = Color.White,
-                                        shape = RoundedCornerShape(20.dp)
-                                    )
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Tomorrow's Plans",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Black,
-                                        fontFamily = dmSansFamily,
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            top = 16.dp,
-                                            bottom = 12.dp
-                                        )
-                                    )
-
-                                    Column(
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            end = 16.dp,
-                                            bottom = 16.dp
-                                        )
-                                    ) {
-                                        if (filteredTomorrowsPlans.isEmpty()) {
-                                            Text(
-                                                text = "No tasks for tomorrow ✅",
-                                                fontSize = 14.sp,
-                                                color = Color.Gray,
-                                                fontFamily = dmSansFamily,
-                                                modifier = Modifier.padding(vertical = 12.dp)
-                                            )
-                                        } else {
-                                            filteredTomorrowsPlans.forEach { plan ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .heightIn(min = 110.dp)
-                                                ) {
-                                                    PlanCard(plan = plan)
-                                                }
-                                                Spacer(modifier = Modifier.height(16.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        item { Spacer(modifier = Modifier.height(100.dp)) }
+                    item {
+                        SearchBarStub()
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
+
+                    item {
+                        WeekChipsRow(
+                            selectedDate = selectedDate,
+                            onSelect = { selectedDate = it }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    item {
+                        LazyRow(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(categories) { category ->
+                                CategoryChip(
+                                    text = category,
+                                    isSelected = category == selectedCategory,
+                                    onClick = { selectedCategory = category }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+
+                    // ✅ Today's Plans
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .background(Color.White, RoundedCornerShape(20.dp))
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Today's Plans",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black,
+                                    fontFamily = dmSansFamily,
+                                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 12.dp)
+                                )
+
+                                Column(
+                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                ) {
+                                    if (filteredTodaysPlans.isEmpty()) {
+                                        Text(
+                                            text = "No tasks for this day ✅",
+                                            fontSize = 14.sp,
+                                            color = Color.Gray,
+                                            fontFamily = dmSansFamily,
+                                            modifier = Modifier.padding(vertical = 12.dp)
+                                        )
+                                    } else {
+                                        filteredTodaysPlans.forEach { plan ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .heightIn(min = 110.dp)
+                                            ) {
+                                                PlanCardTask(
+                                                    plan = plan,
+                                                    onStatusChange = onStatusChange
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
+
+                    // ✅ Tomorrow's Plans
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .background(Color.White, RoundedCornerShape(20.dp))
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Tomorrow's Plans",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black,
+                                    fontFamily = dmSansFamily,
+                                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 12.dp)
+                                )
+
+                                Column(
+                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                ) {
+                                    if (filteredTomorrowsPlans.isEmpty()) {
+                                        Text(
+                                            text = "No tasks for tomorrow ✅",
+                                            fontSize = 14.sp,
+                                            color = Color.Gray,
+                                            fontFamily = dmSansFamily,
+                                            modifier = Modifier.padding(vertical = 12.dp)
+                                        )
+                                    } else {
+                                        filteredTomorrowsPlans.forEach { plan ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .heightIn(min = 110.dp)
+                                            ) {
+                                                PlanCardTask(
+                                                    plan = plan,
+                                                    onStatusChange = onStatusChange
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item { Spacer(modifier = Modifier.height(120.dp)) }
                 }
             }
         }
     }
 }
-
-
-
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
