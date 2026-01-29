@@ -21,7 +21,7 @@ fun WeekChipsRow(
     val days = remember(today) { buildNext7DaysFromToday(today) }
 
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 10.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         items(days) { item ->

@@ -44,7 +44,7 @@ fun MyFinanceScreen(
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedCategory by remember { mutableStateOf("All") }
 
-    val categories = listOf("All", "Pending", "Completed", "Declined")
+    val categories = listOf("All", "Pending", "Completed", "Declined"," IN_PROGRESS")
 
     val expenses = remember {
         listOf(
@@ -152,8 +152,8 @@ fun MyFinanceScreen(
                         // Category filters
                         item {
                             LazyRow(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.padding(horizontal = 15.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 items(categories) { category ->
                                     CategoryChip(
