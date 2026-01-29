@@ -43,28 +43,12 @@ fun MyTasksScreen(
 
     val categories = listOf("All", "Work", "Sports", "Personal", "Travel")
 
-
     var todaysPlans by remember {
         mutableStateOf(
             listOf(
-                TasksUi(
-                    taskId = 1,
-                    title = "Meeting at work",
-                    status = TaskStatus.IN_PROGRESS,
-                    dueDate = System.currentTimeMillis()
-                ),
-                TasksUi(
-                    taskId = 2,
-                    title = "Dinner with Ahmed",
-                    status = TaskStatus.POSTPONED,
-                    dueDate = System.currentTimeMillis()
-                ),
-                TasksUi(
-                    taskId = 3,
-                    title = "Tennis Training",
-                    status = TaskStatus.COMPLETED,
-                    dueDate = System.currentTimeMillis()
-                )
+                TasksUi(1, "Meeting at work", System.currentTimeMillis(), TaskStatus.IN_PROGRESS),
+                TasksUi(2, "Dinner with Ahmed", System.currentTimeMillis(), TaskStatus.POSTPONED),
+                TasksUi(3, "Tennis Training", System.currentTimeMillis(), TaskStatus.COMPLETED)
             )
         )
     }
@@ -72,49 +56,32 @@ fun MyTasksScreen(
     var tomorrowsPlans by remember {
         mutableStateOf(
             listOf(
-                TasksUi(
-                    taskId = 4,
-                    title = "Meeting at work",
-                    status = TaskStatus.IN_PROGRESS,
-                    dueDate = System.currentTimeMillis() + 86_400_000
-                ),
-                TasksUi(
-                    taskId = 5,
-                    title = "Dinner with Ahmed",
-                    status = TaskStatus.COMPLETED,
-                    dueDate = System.currentTimeMillis() + 86_400_000
-                ),
-                TasksUi(
-                    taskId = 6,
-                    title = "Tennis Training",
-                    status = TaskStatus.POSTPONED,
-                    dueDate = System.currentTimeMillis() + 86_400_000
-                )
+                TasksUi(4, "Meeting at work", System.currentTimeMillis() + 86_400_000, TaskStatus.IN_PROGRESS),
+                TasksUi(5, "Dinner with Ahmed", System.currentTimeMillis() + 86_400_000, TaskStatus.COMPLETED),
+                TasksUi(6, "Tennis Training", System.currentTimeMillis() + 86_400_000, TaskStatus.POSTPONED)
             )
         )
     }
 
-    // Dates
     val todayDate = selectedDate
     val tomorrowDate = selectedDate.plusDays(1)
-
 
     val allPlans = todaysPlans + tomorrowsPlans
 
     val filteredTodaysPlans = remember(selectedDate, allPlans) {
-        allPlans.filter { plan -> plan.dueDate?.toLocalDate() == todayDate }
+        allPlans.filter { it.dueDate?.toLocalDate() == todayDate }
     }
 
     val filteredTomorrowsPlans = remember(selectedDate, allPlans) {
-        allPlans.filter { plan -> plan.dueDate?.toLocalDate() == tomorrowDate }
+        allPlans.filter { it.dueDate?.toLocalDate() == tomorrowDate }
     }
-
 
     val onStatusChange: (TasksUi, TaskStatus) -> Unit = { oldPlan, newStatus ->
         todaysPlans = todaysPlans.map { if (it.taskId == oldPlan.taskId) it.copy(status = newStatus) else it }
         tomorrowsPlans = tomorrowsPlans.map { if (it.taskId == oldPlan.taskId) it.copy(status = newStatus) else it }
     }
 
+    // ✅ NO Scaffold here (MainScaffold already contains bottom nav)
     Box(modifier = Modifier.fillMaxSize()) {
 
         FancyGradientBackground { Box(modifier = Modifier.fillMaxSize()) }
@@ -131,19 +98,15 @@ fun MyTasksScreen(
                         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
                     )
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+
                     item {
                         SearchBarStub()
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
                     item {
-                        WeekChipsRow(
-                            selectedDate = selectedDate,
-                            onSelect = { selectedDate = it }
-                        )
+                        WeekChipsRow(selectedDate = selectedDate, onSelect = { selectedDate = it })
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
@@ -163,7 +126,7 @@ fun MyTasksScreen(
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
-                    // ✅ Today's Plans
+                    // Today's Plans
                     item {
                         Box(
                             modifier = Modifier
@@ -181,9 +144,7 @@ fun MyTasksScreen(
                                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 12.dp)
                                 )
 
-                                Column(
-                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                                ) {
+                                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                                     if (filteredTodaysPlans.isEmpty()) {
                                         Text(
                                             text = "No tasks for this day ✅",
@@ -199,10 +160,7 @@ fun MyTasksScreen(
                                                     .fillMaxWidth()
                                                     .heightIn(min = 110.dp)
                                             ) {
-                                                PlanCardTask(
-                                                    plan = plan,
-                                                    onStatusChange = onStatusChange
-                                                )
+                                                PlanCardTask(plan = plan, onStatusChange = onStatusChange)
                                             }
                                             Spacer(modifier = Modifier.height(16.dp))
                                         }
@@ -214,7 +172,7 @@ fun MyTasksScreen(
 
                     item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                    // ✅ Tomorrow's Plans
+                    // Tomorrow's Plans
                     item {
                         Box(
                             modifier = Modifier
@@ -232,9 +190,7 @@ fun MyTasksScreen(
                                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 12.dp)
                                 )
 
-                                Column(
-                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                                ) {
+                                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                                     if (filteredTomorrowsPlans.isEmpty()) {
                                         Text(
                                             text = "No tasks for tomorrow ✅",
@@ -250,10 +206,7 @@ fun MyTasksScreen(
                                                     .fillMaxWidth()
                                                     .heightIn(min = 110.dp)
                                             ) {
-                                                PlanCardTask(
-                                                    plan = plan,
-                                                    onStatusChange = onStatusChange
-                                                )
+                                                PlanCardTask(plan = plan, onStatusChange = onStatusChange)
                                             }
                                             Spacer(modifier = Modifier.height(16.dp))
                                         }
