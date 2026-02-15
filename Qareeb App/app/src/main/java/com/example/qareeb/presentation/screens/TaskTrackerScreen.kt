@@ -11,10 +11,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.qareeb.data.AppDatabase
+import com.example.qareeb.data.SessionManager
+import com.example.qareeb.data.dao.TaskDao
+import com.example.qareeb.data.entity.Task
 import com.example.qareeb.data.entity.TaskStatus
 import com.example.qareeb.presentation.theme.dmSansFamily
 import com.example.qareeb.presentation.ui.components.CategoryChip
@@ -24,6 +30,10 @@ import com.example.qareeb.presentation.ui.components.SearchBarStub
 import com.example.qareeb.presentation.ui.components.TaskWelcomeBanner
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
 import com.example.qareeb.presentation.utilis.toLocalDate
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 data class TasksUi(
@@ -33,40 +43,56 @@ data class TasksUi(
     val status: TaskStatus
 )
 
+private fun Task.toTasksUi(): TasksUi {
+    return TasksUi(
+        taskId = this.taskId,
+        title = this.title,
+        dueDate = this.dueDate,
+        status = this.status
+    )
+}
+
+private fun categoryToStatusOrNull(category: String): TaskStatus? {
+    // Your UI chips are categories (Work/Sports/Personal/Travel) but DB filtering available is by status.
+    // To avoid changing UI/logic, we only filter when "All" is selected.
+    // If you later add a category column, we can filter properly.
+    return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyTasksScreen(
-    username: String = "Farida"
-) {
+fun MyTasksScreen() {
+    // Get context, database, and session manager
+    val context = LocalContext.current
+    val database = remember { AppDatabase.getDatabase(context) }
+    val sessionManager = remember { SessionManager.getInstance(context) }
+
+    // Get userId and username from session
+    val userId = sessionManager.getUserId()
+    val user by database.userDao().getUserById(userId).collectAsState(initial = null)
+    val username = user?.name ?: "Guest"
+
+    // Get taskDao from database
+    val taskDao = database.taskDao()
+
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedCategory by remember { mutableStateOf("All") }
 
     val categories = listOf("All", "Work", "Sports", "Personal", "Travel")
 
-    var todaysPlans by remember {
-        mutableStateOf(
-            listOf(
-                TasksUi(1, "Meeting at work", System.currentTimeMillis(), TaskStatus.IN_PROGRESS),
-                TasksUi(2, "Dinner with Ahmed", System.currentTimeMillis(), TaskStatus.POSTPONED),
-                TasksUi(3, "Tennis Training", System.currentTimeMillis(), TaskStatus.COMPLETED)
-            )
-        )
+    // ✅ replace mock lists with Room Flow
+    val tasksFlow: Flow<List<Task>> = remember(userId, selectedCategory) {
+        // Since your DAO supports filtering by status only (not category),
+        // we keep behavior unchanged: load all tasks for user.
+        taskDao.getTasksByUser(userId)
     }
 
-    var tomorrowsPlans by remember {
-        mutableStateOf(
-            listOf(
-                TasksUi(4, "Meeting at work", System.currentTimeMillis() + 86_400_000, TaskStatus.IN_PROGRESS),
-                TasksUi(5, "Dinner with Ahmed", System.currentTimeMillis() + 86_400_000, TaskStatus.COMPLETED),
-                TasksUi(6, "Tennis Training", System.currentTimeMillis() + 86_400_000, TaskStatus.POSTPONED)
-            )
-        )
-    }
+    val tasksFromDb by tasksFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+
+    val allPlans = remember(tasksFromDb) { tasksFromDb.map { it.toTasksUi() } }
 
     val todayDate = selectedDate
     val tomorrowDate = selectedDate.plusDays(1)
-
-    val allPlans = todaysPlans + tomorrowsPlans
 
     val filteredTodaysPlans = remember(selectedDate, allPlans) {
         allPlans.filter { it.dueDate?.toLocalDate() == todayDate }
@@ -76,9 +102,14 @@ fun MyTasksScreen(
         allPlans.filter { it.dueDate?.toLocalDate() == tomorrowDate }
     }
 
+    // ✅ update DB instead of editing mock data
     val onStatusChange: (TasksUi, TaskStatus) -> Unit = { oldPlan, newStatus ->
-        todaysPlans = todaysPlans.map { if (it.taskId == oldPlan.taskId) it.copy(status = newStatus) else it }
-        tomorrowsPlans = tomorrowsPlans.map { if (it.taskId == oldPlan.taskId) it.copy(status = newStatus) else it }
+        val match = tasksFromDb.firstOrNull { it.taskId == oldPlan.taskId }
+        if (match != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                taskDao.updateTask(match.copy(status = newStatus))
+            }
+        }
     }
 
     // ✅ NO Scaffold here (MainScaffold already contains bottom nav)
@@ -226,5 +257,6 @@ fun MyTasksScreen(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun MyTasksScreenPreview() {
-    MyTasksScreen(username = "Farida")
+    // Preview can't access Room directly.
+    // MyTasksScreen()
 }

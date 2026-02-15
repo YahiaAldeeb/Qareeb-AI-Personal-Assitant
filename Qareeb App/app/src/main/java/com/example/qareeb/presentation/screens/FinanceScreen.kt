@@ -10,8 +10,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.qareeb.data.AppDatabase
+import com.example.qareeb.data.SessionManager
+import com.example.qareeb.data.dao.TransactionDao
+import com.example.qareeb.data.entity.Transaction
 import com.example.qareeb.data.entity.TransactionState
 import com.example.qareeb.presentation.ui.components.CategoryChip
 import com.example.qareeb.presentation.ui.components.FancyGradientBackground
@@ -20,6 +26,10 @@ import com.example.qareeb.presentation.ui.components.SearchBarStub
 import com.example.qareeb.presentation.ui.components.TransactionBox
 import com.example.qareeb.presentation.ui.components.WeekChipsRow
 import com.example.qareeb.presentation.utilis.toLocalDate
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 data class ExpensesItem(
@@ -32,73 +42,76 @@ data class ExpensesItem(
     val income: Boolean
 )
 
+private fun Transaction.toExpensesItem(): ExpensesItem {
+    // Your Transaction table doesn't have a "title", so we derive something stable for UI.
+    // If you later add a "title/name" column, replace this line.
+    val derivedTitle = description?.takeIf { it.isNotBlank() }
+        ?: source?.takeIf { it.isNotBlank() }
+        ?: "Transaction #$transactionId"
+
+    return ExpensesItem(
+        title = derivedTitle,
+        status = this.state,
+        amount = this.amount,
+        date = this.date,
+        source = this.source,
+        description = this.description,
+        income = this.income
+    )
+}
+
+private fun categoryToStateOrNull(category: String): TransactionState? {
+    return when (category) {
+        "Pending" -> TransactionState.PENDING
+        "Completed" -> TransactionState.COMPLETED
+        "Declined" -> TransactionState.DECLINED
+        "In Progress" -> TransactionState.IN_PROGRESS
+        else -> null // "All"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyFinanceScreen(
-    username: String = "User"
-) {
+fun MyFinanceScreen() {
+    // Get context, database, and session manager
+    val context = LocalContext.current
+    val database = remember { AppDatabase.getDatabase(context) }
+    val sessionManager = remember { SessionManager.getInstance(context) }
+
+    // Get userId and username from session
+    val userId = sessionManager.getUserId()
+    val user by database.userDao().getUserById(userId).collectAsState(initial = null)
+    val username = user?.name ?: "Guest"
+
+    // Get transactionDao from database
+    val transactionDao = database.transactionDao()
+
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedCategory by remember { mutableStateOf("All") }
 
-
     val categories = listOf("All", "Pending", "Completed", "Declined", "In Progress")
-
-
-    var expenses by remember {
-        mutableStateOf(
-            listOf(
-                ExpensesItem(
-                    title = "Expert Consultation",
-                    status = TransactionState.COMPLETED,
-                    amount = 150.00,
-                    date = System.currentTimeMillis(),
-                    income = false
-                ),
-                ExpensesItem(
-                    title = "Office Supplies",
-                    status = TransactionState.DECLINED,
-                    amount = 45.00,
-                    date = System.currentTimeMillis(),
-                    income = true
-                ),
-                ExpensesItem(
-                    title = "Website Redesign",
-                    status = TransactionState.IN_PROGRESS,
-                    amount = 2500.00,
-                    date = System.currentTimeMillis(),
-                    income = true
-                )
-            )
-        )
-    }
-
-    var tomorrowExpenses by remember {
-        mutableStateOf(
-            listOf(
-                ExpensesItem(
-                    title = "Client Meeting",
-                    status = TransactionState.COMPLETED,
-                    amount = 200.00,
-                    date = System.currentTimeMillis() + 86_400_000,
-                    income = true
-                ),
-                ExpensesItem(
-                    title = "Software License",
-                    status = TransactionState.IN_PROGRESS,
-                    amount = 99.00,
-                    date = System.currentTimeMillis() + 86_400_000,
-                    income = false
-                )
-            )
-        )
-    }
 
     // Dates
     val todayDate = selectedDate
     val tomorrowDate = selectedDate.plusDays(1)
 
+    // --- DAO FLOW (replaces mock data) ---
+    val stateFilter = remember(selectedCategory) { categoryToStateOrNull(selectedCategory) }
 
-    val allExpenses = expenses + tomorrowExpenses
+    val transactionsFlow: Flow<List<Transaction>> = remember(userId, stateFilter) {
+        if (stateFilter == null) {
+            transactionDao.getTransactionsByUser(userId)
+        } else {
+            transactionDao.getTransactionsByState(userId, stateFilter)
+        }
+    }
+
+    val transactionsFromDb by transactionsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+
+    // Map DB entities -> UI items
+    val allExpenses = remember(transactionsFromDb) {
+        transactionsFromDb.map { it.toExpensesItem() }
+    }
 
     val filteredTodayExpenses = remember(selectedDate, allExpenses) {
         allExpenses.filter { it.date.toLocalDate() == todayDate }
@@ -108,10 +121,25 @@ fun MyFinanceScreen(
         allExpenses.filter { it.date.toLocalDate() == tomorrowDate }
     }
 
-
+    // --- Status change updates Room (best match using transactionId) ---
     val onStatusChange: (ExpensesItem, TransactionState) -> Unit = { oldItem, newState ->
-        expenses = expenses.map { if (it == oldItem) it.copy(status = newState) else it }
-        tomorrowExpenses = tomorrowExpenses.map { if (it == oldItem) it.copy(status = newState) else it }
+
+        val match = transactionsFromDb.firstOrNull { t ->
+            val tTitle = t.description?.takeIf { it.isNotBlank() }
+                ?: t.source?.takeIf { it.isNotBlank() }
+                ?: "Transaction #${t.transactionId}"
+
+            tTitle == oldItem.title &&
+                    t.date == oldItem.date &&
+                    t.amount == oldItem.amount &&
+                    t.income == oldItem.income
+        }
+
+        if (match != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                transactionDao.updateTransaction(match.copy(state = newState))
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -151,7 +179,7 @@ fun MyFinanceScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Category filters (your chips)
+                    // Category filters
                     item {
                         LazyRow(
                             modifier = Modifier.padding(horizontal = 15.dp),
@@ -168,7 +196,7 @@ fun MyFinanceScreen(
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
-                    // Today's Transactions Box (✅ now supports dropdown updates)
+                    // Today's Transactions Box
                     item {
                         TransactionBox(
                             title = "Today's Transactions",
@@ -180,7 +208,7 @@ fun MyFinanceScreen(
 
                     item { Spacer(modifier = Modifier.height(24.dp)) }
 
-
+                    // Tomorrow's Transactions Box
                     item {
                         TransactionBox(
                             title = "Tomorrow's Transactions",
@@ -189,7 +217,6 @@ fun MyFinanceScreen(
                             onStatusChange = onStatusChange
                         )
                     }
-
 
                     item { Spacer(modifier = Modifier.height(120.dp)) }
                 }
@@ -201,5 +228,6 @@ fun MyFinanceScreen(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun MyFinanceScreenPreview() {
-    MyFinanceScreen(username = "Farida")
+    // Preview can't access Room directly.
+    // MyFinanceScreen()
 }
