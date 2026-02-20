@@ -1,13 +1,9 @@
 package com.example.qareeb.data.entity
 
 import androidx.room.*
+import com.example.qareeb.domain.model.enums.TaskStatus
+import java.util.UUID
 
-enum class TaskStatus {
-    COMPLETED,
-    POSTPONED,
-    PENDING,
-    IN_PROGRESS
-}
 @Entity(
     tableName = "task",
     foreignKeys = [
@@ -21,13 +17,12 @@ enum class TaskStatus {
     indices = [Index("user_id")]
 )
 data class Task(
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     @ColumnInfo(name = "task_id")
-    val taskId: Long = 0,
+    val taskId: String = UUID.randomUUID().toString(),
 
     @ColumnInfo(name = "user_id")
-    val userId: Long,
-
+    val userId: String,
     val title: String,
     val description: String? = null,
     val status: TaskStatus = TaskStatus.PENDING,
@@ -41,5 +36,9 @@ data class Task(
     val priority: String? = null,
 
     @ColumnInfo(name = "due_date")
-    val dueDate: Long? = null
+    val dueDate: Long? = null,
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: String = System.currentTimeMillis().toString(),
+    @ColumnInfo(name = "is_deleted")
+    val isDeleted: Boolean = false
 )

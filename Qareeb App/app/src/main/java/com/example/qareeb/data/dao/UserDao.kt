@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface UserDao {
     @Query("SELECT * FROM user WHERE user_id = :userId")
-    fun getUserById(userId: Long): Flow<User?>
+    fun getUserById(userId: String): Flow<User?>
 
     @Query("SELECT * FROM user WHERE email = :email")
     suspend fun getUserByEmail(email: String): User?
@@ -22,8 +22,8 @@ interface UserDao {
     suspend fun deleteUser(user: User)
 
     @Query("SELECT * FROM user WHERE user_id = :userId AND voice_embedding IS NOT NULL")
-    suspend fun getUserWithVoiceBiometric(userId: Long): User?
+    suspend fun getUserWithVoiceBiometric(userId: String): User?
 
     @Query("UPDATE user SET voice_embedding = :embedding WHERE user_id = :userId")
-    suspend fun updateVoiceEmbedding(userId: Long, embedding: String)
+    suspend fun updateVoiceEmbedding(userId: String, embedding: String)
 }

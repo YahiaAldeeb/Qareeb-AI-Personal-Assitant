@@ -1,6 +1,7 @@
 package com.example.qareeb
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -23,7 +24,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
+import com.example.qareeb.data.AppDatabase
+import com.example.qareeb.data.remote.RetrofitInstance
+import com.example.qareeb.data.remote.SyncRepository
+import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
+import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
+import com.example.qareeb.presentation.MainScaffold
+import com.example.qareeb.presentation.utilis.SessionManager
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -36,15 +46,38 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
+        val db = AppDatabase.getDatabase(this)
+        val sessionManager = SessionManager.getInstance(this)
+        val taskRepo = TaskRepositoryImpl(db.taskDao())
+        val financeRepo = TransactionRepositoryImpl(db.transactionDao())
+
+        val userId = sessionManager.getUserId()
+        if (!userId.isNullOrEmpty()) {
+            lifecycleScope.launch {
+                val syncRepo = SyncRepository(
+                    taskDao = db.taskDao(),
+                    api = RetrofitInstance.api,
+                    prefs = getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
+                )
+                syncRepo.sync(userId)
+            }
+        }
+
         setContent {
             // This is your Compose UI Entry Point
-            QareebHomeScreen(
-                onStartClick = { checkPermissionsAndStart() }
-            )
+            MainScaffold(sessionManager = sessionManager,
+                taskRepo = taskRepo,
+                financeRepo = financeRepo)
+
+//            FancyGradientBackground {
+//                MyFinanceScreen("Farida")
+//            }
         }
     }
-
     private fun checkPermissionsAndStart() {
         // 1. Check Overlay Permission (Special)
         if (!Settings.canDrawOverlays(this)) {

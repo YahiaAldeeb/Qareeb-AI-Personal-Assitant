@@ -3,13 +3,13 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     id("org.jetbrains.kotlin.kapt")
+    id ("kotlin-kapt")
+
 }
 
 android {
     namespace = "com.example.qareeb"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.qareeb"
@@ -30,28 +30,71 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildFeatures {
         compose = true
-        viewBinding = true // Keep this true if you use ViewBinding elsewhere, otherwise false
-    }
-    composeOptions {
-//        kotlinCompilerExtensionVersion = "1.5.1"
+        viewBinding = true
     }
 }
+
 dependencies {
+
+    /* ---------------- Core Android ---------------- */
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+
+
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
+
+    /* ---------------- Activity ---------------- */
+    implementation("androidx.activity:activity-compose:1.9.0")
+
+    /* ---------------- Compose (BOM) ---------------- */
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-text")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.ui.geometry)
+
+
+    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.activity:activity-compose:1.9.0")
+
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // REQUIRED for Preview / Design tab
+    debugImplementation("androidx.compose.ui:ui-tooling")
+
+    /* ---------------- Security (FIXES your error) ---------------- */
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    /* ---------------- Database (Room) ---------------- */
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,26 +103,42 @@ dependencies {
     implementation("com.alphacephei:vosk-android:0.3.47")
     //Database
     implementation("androidx.room:room-runtime:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
 
-    // Retrofit (The Networking Client)
+    /* ---------------- Networking ---------------- */
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-
-    // OkHttp (Logging interceptor to see API calls in Logcat - VERY helpful)
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
-    // Coroutines (Jetpack's tool for background tasks)
+    /* ---------------- Coroutines ---------------- */
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    /* ---------------- AI / Animations ---------------- */
+    implementation("ai.picovoice:porcupine-android:3.0.1")
+    implementation("com.airbnb.android:lottie:6.1.0")
 
+    /* ---------------- Testing ---------------- */
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 
-    // Compose BOM (Bill of Materials) - manages versions
-    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.activity:activity-compose:1.7.2") // Vital for MainActivity
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // Room
+    implementation ("androidx.room:room-runtime:2.6.1")
+    implementation ("androidx.room:room-ktx:2.6.1")
+    kapt ("androidx.room:room-compiler:2.6.1")
+
+    // Retrofit (for API calls)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+// WorkManager (for background sync)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+// Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
 }
