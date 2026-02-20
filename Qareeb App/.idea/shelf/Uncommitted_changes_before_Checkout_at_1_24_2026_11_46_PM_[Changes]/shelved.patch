@@ -1,0 +1,605 @@
+Index: app/src/main/java/com/example/qareeb/utilis/Date.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.qareeb.utilis\r\n\r\nimport java.time.Instant\r\nimport java.time.LocalDate\r\nimport java.time.ZoneId\r\n\r\nfun Long.toLocalDate(): LocalDate {\r\n    return Instant.ofEpochMilli(this)\r\n        .atZone(ZoneId.systemDefault())\r\n        .toLocalDate()\r\n}
+===================================================================
+diff --git a/app/src/main/java/com/example/qareeb/utilis/Date.kt b/app/src/main/java/com/example/qareeb/utilis/Date.kt
+--- a/app/src/main/java/com/example/qareeb/utilis/Date.kt	(revision 110dd64a992bbfe07e539214d8e5a8bf01a373fc)
++++ b/app/src/main/java/com/example/qareeb/utilis/Date.kt	(date 1769229568201)
+@@ -1,11 +1,31 @@
+ package com.example.qareeb.utilis
+ 
++import com.example.qareeb.presentation.ui.screens.DayItem
++import java.text.SimpleDateFormat
+ import java.time.Instant
+ import java.time.LocalDate
+ import java.time.ZoneId
++import java.time.format.TextStyle
++import java.util.Date
++import java.util.Locale
+ 
+ fun Long.toLocalDate(): LocalDate {
+     return Instant.ofEpochMilli(this)
+         .atZone(ZoneId.systemDefault())
+         .toLocalDate()
++}
++
++fun formatDate(timestamp: Long): String {
++    val formatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
++    return formatter.format(Date(timestamp))
++}
++
++fun buildNext7DaysFromToday(today: LocalDate): List<DayItem> {
++    return (0..6).map { i ->
++        val d = today.plusDays(i.toLong())
++        DayItem(
++            label = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH), // Fri, Sat...
++            date = d
++        )
++    }
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/example/qareeb/screens/SharedComposables.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/qareeb/screens/SharedComposables.kt b/app/src/main/java/com/example/qareeb/presentation/ui/screens/SharedComposables.kt
+rename from app/src/main/java/com/example/qareeb/screens/SharedComposables.kt
+rename to app/src/main/java/com/example/qareeb/presentation/ui/screens/SharedComposables.kt
+--- a/app/src/main/java/com/example/qareeb/screens/SharedComposables.kt	(revision 110dd64a992bbfe07e539214d8e5a8bf01a373fc)
++++ b/app/src/main/java/com/example/qareeb/presentation/ui/screens/SharedComposables.kt	(date 1769229568162)
+@@ -1,25 +1,10 @@
+-package com.example.qareeb.screens
++package com.example.qareeb.presentation.ui.screens
+ 
+-import androidx.compose.foundation.BorderStroke
+ import androidx.compose.foundation.Image
+-import androidx.compose.foundation.LocalIndication
+ import androidx.compose.foundation.background
+-import androidx.compose.foundation.border
+-import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.*
+-import androidx.compose.foundation.lazy.LazyRow
+-import androidx.compose.foundation.lazy.items
+-import androidx.compose.foundation.shape.CircleShape
+ import androidx.compose.foundation.shape.RoundedCornerShape
+-import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.filled.Search
+-import androidx.compose.material3.Card
+-import androidx.compose.material3.CardDefaults
+-import androidx.compose.material3.ExperimentalMaterial3Api
+-import androidx.compose.material3.FilterChip
+ import androidx.compose.material3.Icon
+-import androidx.compose.material3.OutlinedTextField
+-import androidx.compose.material3.OutlinedTextFieldDefaults
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Alignment
+@@ -29,41 +14,17 @@
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.res.painterResource
+-import androidx.compose.ui.text.font.Font
+-import androidx.compose.ui.text.font.FontFamily
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import com.example.qareeb.R
+ import androidx.compose.material3.Surface
+-import java.text.SimpleDateFormat
+-import java.util.Date
+-import java.util.Locale
+-import androidx.compose.foundation.clickable
+-import androidx.compose.foundation.interaction.MutableInteractionSource
+-import androidx.compose.runtime.remember
+-import java.time.DayOfWeek
++import com.example.qareeb.ui.theme.dmSans
+ import java.time.LocalDate
+-import java.time.format.TextStyle
+-
+-
+ 
+ 
+ // Font definition - shared throughout the app
+-val dmSansFamily = FontFamily(
+-    Font(R.font.dmsans_regular, FontWeight.Normal),
+-    Font(R.font.dmsans_medium, FontWeight.Medium),
+-    Font(R.font.dmsans_bold, FontWeight.Bold),
+-    Font(R.font.dmsans_extralight, weight = FontWeight.ExtraLight),
+-)
+-val interFamily= FontFamily(
+-    Font(R.font.inter_24pt_regular, FontWeight.Normal),
+-    Font(R.font.inter_24pt_bold, FontWeight.Bold),
+-    Font(R.font.inter_24pt_medium, FontWeight.Medium),
+-    Font(R.font.inter_24pt_semibold, FontWeight.SemiBold),
+-    Font(R.font.inter_24pt_extrabold, FontWeight.ExtraBold),
+-    Font(R.font.inter_24pt_light, FontWeight.Light),
+-    )
++
+ 
+ data class DayItem(
+     val label: String,     // "Fri"
+@@ -96,68 +57,7 @@
+     }
+ 
+ 
+-@Composable
+-fun FancyGradientBackground(content: @Composable () -> Unit) {
+-    Box(modifier = Modifier.fillMaxSize()) {
+-        // 1. Horizontal gradient background
+-        Box(
+-            modifier = Modifier
+-                .fillMaxSize()
+-                .background(
+-                    brush = Brush.horizontalGradient(
+-                        colors = listOf(Color(0xFF6B46C1), Color(0xFF2C7A7B))
+-                    )
+-                )
+-        )
+-
+-        // 2. Stars overlay image
+-        Image(
+-            painter = painterResource(id = R.drawable.stars),
+-            contentDescription = null,
+-            modifier = Modifier.fillMaxSize(),
+-            contentScale = ContentScale.Crop
+-        )
+-        Image(
+-            painter = painterResource(id = R.drawable.stars),
+-            contentDescription = null,
+-            modifier = Modifier.fillMaxSize(),
+-            contentScale = ContentScale.Crop
+-        )
+-        Image(
+-            painter = painterResource(id = R.drawable.stars),
+-            contentDescription = null,
+-            modifier = Modifier.fillMaxSize(),
+-            contentScale = ContentScale.Crop
+-        )
+-        Image(
+-            painter = painterResource(id = R.drawable.stars),
+-            contentDescription = null,
+-            modifier = Modifier.fillMaxSize(),
+-            contentScale = ContentScale.Crop
+-        )
+-        Image(
+-            painter = painterResource(id = R.drawable.stars),
+-            contentDescription = null,
+-            modifier = Modifier.fillMaxSize(),
+-            contentScale = ContentScale.Crop
+-        )
+ 
+-        // 3. Vertical gradient fade to white at bottom
+-        Box(
+-            modifier = Modifier
+-                .fillMaxSize()
+-                .background(
+-                    brush = Brush.verticalGradient(
+-                        colors = listOf(Color.Transparent, Color.White),
+-                        startY = 1100f
+-                    )
+-                )
+-        )
+-
+-        // 4. Content on top
+-        content()
+-    }
+-}
+ 
+ /**
+  * Shared welcome banner composable
+@@ -182,7 +82,7 @@
+                 text = "You've got things to accomplish — let's do it!",
+                 color = Color.White,
+                 fontSize = 14.sp,
+-                fontFamily = dmSansFamily
++                fontFamily = dmSans
+             )
+         }
+         Icon(
+@@ -264,7 +164,7 @@
+                 color = Color.White,
+                 fontSize = 12.sp,
+                 fontWeight = FontWeight.Medium,
+-                fontFamily = dmSansFamily
++                fontFamily = dmSans
+             )
+ 
+             if (trailing != null) {
+@@ -274,193 +174,3 @@
+         }
+     }
+ }
+-@Composable
+-fun PlanCard(plan: PlanItem) {
+-    Card(
+-        modifier = Modifier
+-            .fillMaxWidth()
+-            .padding(horizontal = 16.dp)
+-            .border(2.dp,color= Color(0xFFE9D8FD), shape = RoundedCornerShape(4.dp))
+-            .height(108.dp),
+-
+-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0E8FF)),
+-        shape = RoundedCornerShape(4.dp)
+-
+-    ) {
+-        Row(
+-            modifier = Modifier.padding(16.dp),
+-            verticalAlignment = Alignment.CenterVertically
+-        ) {
+-            Column(Modifier.weight(1f)) {
+-                Row(verticalAlignment = Alignment.CenterVertically) {
+-                    Image(painter = painterResource(id = R.drawable.checktask),
+-                        contentDescription = null,
+-                        Modifier.size(25.dp)
+-                    )
+-                    Text("TASK-"+plan.taskId, fontWeight = FontWeight.Light, color = Color(0xFF726B81))
+-                    Spacer(Modifier.width(120.dp))
+-                    Surface(
+-                        border = BorderStroke(1.dp, plan.tag.color),
+-                        color = plan.tag.color.copy(alpha = 0.15f),
+-                        shape = RoundedCornerShape(9.dp)
+-                    ) {
+-                        Text(
+-                            text = plan.tag.name.replace("_", " "),
+-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+-                            color = plan.tag.color,
+-                            fontSize = 12.sp,
+-                            fontFamily = interFamily
+-                        )
+-                    }
+-                }
+-                Spacer(Modifier.height(8.dp))
+-                Text(plan.title, fontFamily = interFamily,fontSize=16.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+-                Spacer(Modifier.height(8.dp))
+-                Row(Modifier.weight(1f)) {
+-                    Image(
+-                        painter = painterResource(id = R.drawable.calendar),
+-                        contentDescription = null,
+-                        modifier = Modifier.size(14.dp),
+-                        contentScale = ContentScale.Crop
+-                    )
+-                    Spacer(Modifier.width(8.dp))
+-                    Text(
+-                        text = plan.dueDate?.let { formatDate(it) } ?: "No due date",
+-                        fontSize = 12.sp,
+-                        color = Color.Black,
+-                        fontFamily = interFamily,
+-                        fontWeight = FontWeight.Light
+-                    )
+-                }
+-                }
+-            }
+-
+-
+-        }
+-    }
+-
+-@Composable
+-fun DayCard(
+-    dayLabel: String,
+-    dayNumber: Int,
+-    selected: Boolean,
+-    onClick: () -> Unit
+-) {
+-    val backgroundColor = if (selected) Color(0xFF6B46C1) else Color.White
+-    val textColor = if (selected) Color.White else Color.Black
+-    val dotColor = if (selected) Color(0xFF22D3EE) else Color(0xFF111827)
+-
+-    Column(
+-        modifier = Modifier
+-            .width(45.dp)
+-            .height(86.dp)
+-            .clip(RoundedCornerShape(18.dp))
+-            .background(backgroundColor)
+-            .border(
+-                width = if (selected) 0.dp else 1.dp,
+-                color = Color(0xFFE5E7EB),
+-                shape = RoundedCornerShape(18.dp)
+-            )
+-            .clickable(
+-                interactionSource = remember { MutableInteractionSource() },
+-                indication = null
+-            ) { onClick() },
+-        horizontalAlignment = Alignment.CenterHorizontally,
+-        verticalArrangement = Arrangement.SpaceBetween
+-    ) {
+-        Spacer(Modifier.height(8.dp))
+-
+-        Box(
+-            modifier = Modifier
+-                .size(8.dp)
+-                .background(dotColor, CircleShape)
+-        )
+-
+-        Text(
+-            text = dayLabel,
+-            fontSize = 14.sp,
+-            fontWeight = FontWeight.Medium,
+-            color = textColor
+-        )
+-
+-        Text(
+-            text = dayNumber.toString(),
+-            fontSize = 16.sp,
+-            fontWeight = FontWeight.Bold,
+-            color = textColor
+-        )
+-
+-        Spacer(Modifier.height(8.dp))
+-    }
+-}
+-
+-
+-@OptIn(ExperimentalMaterial3Api::class)
+-@Composable
+-fun WeekChipsRow(
+-    selectedDate: LocalDate,
+-    onSelect: (LocalDate) -> Unit
+-) {
+-    val today = remember { LocalDate.now() }
+-    val days = remember(today) { buildNext7DaysFromToday(today) }
+-
+-    LazyRow(
+-        contentPadding = PaddingValues(horizontal = 10.dp),
+-        horizontalArrangement = Arrangement.spacedBy(9.dp)
+-    ) {
+-        items(days) { item ->
+-            DayCard(
+-                dayLabel = item.label,
+-                dayNumber = item.date.dayOfMonth,     // ✅ real calendar day number
+-                selected = item.date == selectedDate, // ✅ purple only when selected
+-                onClick = { onSelect(item.date) }
+-            )
+-        }
+-    }
+-}
+-
+-
+-
+-
+-@Composable
+-fun SearchBarStub() {
+-    OutlinedTextField(
+-
+-        value = "",
+-        onValueChange = {},
+-        placeholder = { Text("Search for Plans", color = Color.Gray) },
+-        modifier = Modifier
+-            .fillMaxWidth()
+-            .padding(horizontal = 16.dp),
+-
+-        shape = RoundedCornerShape(12.dp),
+-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+-        singleLine = true,
+-
+-        colors = OutlinedTextFieldDefaults.colors(
+-            unfocusedBorderColor = Color(0xFFD6D6D6),     // 👈 outline when not focused
+-            focusedBorderColor = Color(0xFFD6D6D6),
+-            unfocusedContainerColor = Color(0xFFFAF5FF),// 👈 outline when not focused
+-            focusedContainerColor = Color(0xFFFAF5FF),// 👈 outline when focused
+-            cursorColor = Color(0xFFD6D6D6),
+-            focusedTextColor = Color.Black,
+-            unfocusedTextColor = Color.Black
+-        )
+-    )
+-}
+-fun buildNext7DaysFromToday(today: LocalDate): List<DayItem> {
+-    return (0..6).map { i ->
+-        val d = today.plusDays(i.toLong())
+-        DayItem(
+-            label = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH), // Fri, Sat...
+-            date = d
+-        )
+-    }
+-}
+-
+-
+-fun formatDate(timestamp: Long): String {
+-    val formatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+-    return formatter.format(Date(timestamp))
+-}
+-
+Index: app/src/main/java/com/example/qareeb/screens/TaskTrackerScreen.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/qareeb/screens/TaskTrackerScreen.kt b/app/src/main/java/com/example/qareeb/presentation/ui/screens/TaskTrackerScreen.kt
+rename from app/src/main/java/com/example/qareeb/screens/TaskTrackerScreen.kt
+rename to app/src/main/java/com/example/qareeb/presentation/ui/screens/TaskTrackerScreen.kt
+--- a/app/src/main/java/com/example/qareeb/screens/TaskTrackerScreen.kt	(revision 110dd64a992bbfe07e539214d8e5a8bf01a373fc)
++++ b/app/src/main/java/com/example/qareeb/presentation/ui/screens/TaskTrackerScreen.kt	(date 1769229568245)
+@@ -1,4 +1,4 @@
+-package com.example.qareeb.screens
++package com.example.qareeb.presentation.ui.screens
+ 
+ import androidx.compose.foundation.BorderStroke
+ import androidx.compose.foundation.background
+Index: app/src/main/java/com/example/qareeb/screens/DashboardScreen.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/qareeb/screens/DashboardScreen.kt b/app/src/main/java/com/example/qareeb/presentation/ui/screens/DashboardScreen.kt
+rename from app/src/main/java/com/example/qareeb/screens/DashboardScreen.kt
+rename to app/src/main/java/com/example/qareeb/presentation/ui/screens/DashboardScreen.kt
+--- a/app/src/main/java/com/example/qareeb/screens/DashboardScreen.kt	(revision 110dd64a992bbfe07e539214d8e5a8bf01a373fc)
++++ b/app/src/main/java/com/example/qareeb/presentation/ui/screens/DashboardScreen.kt	(date 1769229568064)
+@@ -1,4 +1,4 @@
+-package com.example.qareeb.screens
++package com.example.qareeb.presentation.ui.screens
+ 
+ import androidx.compose.foundation.BorderStroke
+ import androidx.compose.foundation.Image
+@@ -26,12 +26,11 @@
+ import androidx.compose.ui.unit.sp
+ import com.example.qareeb.ui.theme.QareebTheme
+ import com.example.qareeb.R
+-import java.time.Instant
+ import java.time.LocalDate
+-import java.time.ZoneId
+ import com.example.qareeb.utilis.toLocalDate
+ import androidx.compose.ui.zIndex
+-
++import androidx.room.ColumnInfo
++import com.example.qareeb.ui.theme.Inter
+ 
+ 
+ // -------------------------
+@@ -46,19 +45,25 @@
+ )
+ 
+ data class ExpenseItem(
+-    val title: String,
+-    val status: TransactionStatus,
++    val transactionId: Long = 0,
++
++    @ColumnInfo(name = "user_id")
++    val userId: Long,
++
++    @ColumnInfo(name = "category_id")
++    val categoryId: Long? = null,
++
+     val amount: Double,
+     val date: Long = System.currentTimeMillis(),
+     val source: String? = null,
+     val description: String? = null,
+-    val income: Boolean
+-)
+ 
++    // true = income (green), false = outcome/expense (red)
++    var income: Boolean = false,
+ 
+-
+-
+-
++    // Transaction state: "completed", "declined", "pending", "in_progress"
++    var state: TransactionStatus
++)
+ // -------------------------
+ // Screen
+ // -------------------------
+@@ -100,23 +105,22 @@
+     val expenses = remember {
+         listOf(
+             ExpenseItem(
+-                title = "Expert Consultation",
+-                status = TransactionStatus.COMPLETED,
++                description = "Expert Consultation",
++                state = TransactionStatus.COMPLETED,
+                 amount = 150.00,
+                 date = 1704067200000L,// 01 Jan 2024 (example timestamp),
+                 income=false
+             ),
+             ExpenseItem(
+-                title = "Office Supplies",
+-                status = TransactionStatus.DECLINED,
+-
++                description = "Office Supplies",
++                state = TransactionStatus.DECLINED,
+                 amount = 45.00,
+                 date = 1704067200000L,
+                 income=true
+             ),
+             ExpenseItem(
+-                title = "Website Redesign",
+-                status = TransactionStatus.IN_PROGRESS,
++                description = "Website Redesign",
++                state = TransactionStatus.IN_PROGRESS,
+ 
+                 amount = 2500.00,
+                 date = 1704067200000L,
+@@ -280,8 +284,8 @@
+             modifier = Modifier.weight(1f)
+         ) {
+             Text(
+-                text = item.title,
+-                fontFamily = interFamily,
++                text = item.description ?: "No Description",
++                fontFamily = Inter,
+                 fontWeight = FontWeight.SemiBold,
+                 fontSize = 16.sp,
+                 maxLines = 1,
+@@ -293,7 +297,7 @@
+ 
+             Text(
+                 text = formatDate(item.date),
+-                fontFamily = interFamily,
++                fontFamily = Inter,
+                 fontSize = 12.sp,
+                 color = Color.Gray,
+                 fontWeight = FontWeight.Light
+@@ -306,23 +310,23 @@
+             verticalAlignment = Alignment.CenterVertically
+         ) {
+             Surface(
+-                border = BorderStroke(1.dp, item.status.color),
+-                color = item.status.color.copy(alpha = 0.12f),
++                border = BorderStroke(1.dp, item.state.color),
++                color = item.state.color.copy(alpha = 0.12f),
+                 shape = RoundedCornerShape(10.dp)
+             ) {
+                 Text(
+-                    text = item.status.name.replace("_", " "),
++                    text = item.state.name.replace("_", " "),
+                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+-                    color = item.status.color,
++                    color = item.state.color,
+                     fontSize = 12.sp,
+-                    fontFamily = interFamily,
++                    fontFamily = Inter,
+                     fontWeight = FontWeight.Medium
+                 )
+             }
+ 
+             Text(
+                 text = "${item.amount}$",
+-                fontFamily = interFamily,
++                fontFamily = Inter,
+                 fontWeight = FontWeight.Bold,
+                 fontSize = 15.sp,
+                 color = if (item.income) Color(0xFF00A63E) else Color(0xFFA62700)
+Index: app/src/main/java/com/example/qareeb/screens/FinanceScreen.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/qareeb/screens/FinanceScreen.kt b/app/src/main/java/com/example/qareeb/presentation/ui/screens/FinanceScreen.kt
+rename from app/src/main/java/com/example/qareeb/screens/FinanceScreen.kt
+rename to app/src/main/java/com/example/qareeb/presentation/ui/screens/FinanceScreen.kt
+--- a/app/src/main/java/com/example/qareeb/screens/FinanceScreen.kt	(revision 110dd64a992bbfe07e539214d8e5a8bf01a373fc)
++++ b/app/src/main/java/com/example/qareeb/presentation/ui/screens/FinanceScreen.kt	(date 1769229568234)
+@@ -1,7 +1,5 @@
+-package com.example.qareeb.screens
++package com.example.qareeb.presentation.ui.screens
+ 
+-import androidx.compose.foundation.BorderStroke
+-import androidx.compose.foundation.Image
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+@@ -21,7 +19,6 @@
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.vector.ImageVector
+-import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.dp
+Index: app/src/main/java/com/example/qareeb/screens/ChatBotScreen.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/qareeb/screens/ChatBotScreen.kt b/app/src/main/java/com/example/qareeb/presentation/ui/screens/ChatBotScreen.kt
+rename from app/src/main/java/com/example/qareeb/screens/ChatBotScreen.kt
+rename to app/src/main/java/com/example/qareeb/presentation/ui/screens/ChatBotScreen.kt
+--- a/app/src/main/java/com/example/qareeb/screens/ChatBotScreen.kt	(revision 110dd64a992bbfe07e539214d8e5a8bf01a373fc)
++++ b/app/src/main/java/com/example/qareeb/presentation/ui/screens/ChatBotScreen.kt	(date 1769229568110)
+@@ -1,4 +1,4 @@
+-package com.example.qareeb.screens
++package com.example.qareeb.presentation.ui.screens
+ 
+ import android.os.Bundle
+ import androidx.activity.ComponentActivity
+@@ -22,12 +22,11 @@
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.text.TextStyle
+ import androidx.compose.ui.text.font.FontWeight
+-import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import com.example.qareeb.R
+ import com.example.qareeb.data.AppDatabase
+-import com.example.qareeb.data.SessionManager
++import com.example.qareeb.utilis.SessionManager
+ import com.example.qareeb.ui.theme.QareebTheme
+ 
+ class ChatBotScreen : ComponentActivity() {

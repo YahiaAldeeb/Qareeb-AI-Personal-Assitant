@@ -1,0 +1,18 @@
+Index: ../qareeb-backend/src/user/entities/user.entity.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>export class User {}\r\n
+===================================================================
+diff --git a/../qareeb-backend/src/user/entities/user.entity.ts b/../qareeb-backend/src/user/entities/user.entity.ts
+--- a/../qareeb-backend/src/user/entities/user.entity.ts	(revision 871a99922b822a75b7561bf8009cd70a732f9db5)
++++ b/../qareeb-backend/src/user/entities/user.entity.ts	(date 1771156364095)
+@@ -1,1 +1,8 @@
+-export class User {}
++export class User {
++    id: number;
++    name: string;
++    email: string;
++    password: string;
++    createdAt: Date;
++    last_login: Date;
++}

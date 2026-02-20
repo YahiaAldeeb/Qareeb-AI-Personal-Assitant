@@ -1,13 +1,14 @@
 package com.example.qareeb.data.entity
 
 import androidx.room.*
+import java.util.UUID
 
 
 @Entity(tableName = "user")
 data class User(
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     @ColumnInfo(name = "user_id")
-    val userId: Long = 0,
+    val userId: String = UUID.randomUUID().toString(),
 
     val name: String,
     val email: String,

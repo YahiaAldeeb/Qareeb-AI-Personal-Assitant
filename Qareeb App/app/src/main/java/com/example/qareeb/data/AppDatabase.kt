@@ -17,7 +17,7 @@ import com.example.qareeb.data.entity.*
         Task::class,
         Activity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
