@@ -5,16 +5,11 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-/**
- * SessionManager - Manages user session data securely
- * Singleton class to handle user authentication state across the app
- */
 class SessionManager private constructor(context: Context) {
 
     private var prefs: SharedPreferences
 
     init {
-        // Initialize encrypted SharedPreferences for security
         val appContext = context.applicationContext
         try {
             val masterKey = MasterKey.Builder(appContext)
@@ -29,7 +24,6 @@ class SessionManager private constructor(context: Context) {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            // Fallback to regular SharedPreferences if encryption fails
             prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         }
     }
@@ -38,15 +32,11 @@ class SessionManager private constructor(context: Context) {
         private const val PREFS_NAME = "qareeb_secure_prefs"
         private const val USER_ID = "user_id"
         private const val USER_NAME = "user_name"
-        private const val USER_EMAIL = "user_email" // Optional: if you need email
+        private const val USER_EMAIL = "user_email"
 
         @Volatile
         private var instance: SessionManager? = null
 
-        /**
-         * Get singleton instance of SessionManager
-         * Thread-safe double-checked locking
-         */
         fun getInstance(context: Context): SessionManager {
             return instance ?: synchronized(this) {
                 instance ?: SessionManager(context.applicationContext).also {
@@ -56,80 +46,44 @@ class SessionManager private constructor(context: Context) {
         }
     }
 
-    /**
-     * Save complete user session data
-     * @param userId User's unique identifier
-     * @param username User's display name
-     */
-    fun saveUserSession(userId: Long, username: String, email: String? = null) {
+    fun saveUserSession(userId: String, username: String, email: String? = null) {
         prefs.edit().apply {
-            putLong(USER_ID, userId)
+            putString(USER_ID, userId)
             putString(USER_NAME, username)
             email?.let { putString(USER_EMAIL, it) }
             apply()
         }
     }
 
-    /**
-     * Save user ID
-     */
-    fun saveUserId(userId: Long) {
-        prefs.edit().putLong(USER_ID, userId).apply()
+    fun saveUserId(userId: String) {                          // ← String not Long
+        prefs.edit().putString(USER_ID, userId).apply()       // ← putString not putLong
     }
 
-    /**
-     * Save username
-     */
     fun saveUsername(username: String) {
         prefs.edit().putString(USER_NAME, username).apply()
     }
 
-    /**
-     * Save user email
-     */
     fun saveUserEmail(email: String) {
         prefs.edit().putString(USER_EMAIL, email).apply()
     }
 
-    /**
-     * Get user ID
-     * @return User ID or -1 if not found
-     */
-    fun getUserId(): Long {
-        return prefs.getLong(USER_ID, -1L)
+    fun getUserId(): String? {
+        return prefs.getString(USER_ID, null)                 // ← null not -1L
     }
 
-    /**
-     * Get username
-     * @return Username or null if not found
-     */
     fun getUsername(): String? {
         return prefs.getString(USER_NAME, null)
     }
 
-    /**
-     * Get user email
-     * @return Email or null if not found
-     */
     fun getUserEmail(): String? {
         return prefs.getString(USER_EMAIL, null)
     }
 
-    /**
-     * Check if user is logged in
-     * @return true if user session exists, false otherwise
-     */
     fun isLoggedIn(): Boolean {
-        return getUserId() != -1L && !getUsername().isNullOrEmpty()
+        return !getUserId().isNullOrEmpty() && !getUsername().isNullOrEmpty() // ← String null check
     }
 
-    /**
-     * Clear all session data (logout)
-     */
     fun clearSession() {
         prefs.edit().clear().apply()
     }
-
-
-
 }

@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 
 class TransactionRepositoryImpl(private val transactionDao: TransactionDao) : TransactionRepository {
 
-    override fun getTransactionsByUser(userId: Long): Flow<List<TransactionDomain>> {
+    override fun getTransactionsByUser(userId: String): Flow<List<TransactionDomain>> {
         return transactionDao.getTransactionsByUser(userId).map { list ->
             list.map { it.toDomain() }  // ← map each item in the list
         }

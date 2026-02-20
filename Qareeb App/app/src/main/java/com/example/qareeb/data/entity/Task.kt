@@ -2,6 +2,7 @@ package com.example.qareeb.data.entity
 
 import androidx.room.*
 import com.example.qareeb.domain.model.enums.TaskStatus
+import java.util.UUID
 
 @Entity(
     tableName = "task",
@@ -16,13 +17,12 @@ import com.example.qareeb.domain.model.enums.TaskStatus
     indices = [Index("user_id")]
 )
 data class Task(
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     @ColumnInfo(name = "task_id")
-    val taskId: Long = 0,
+    val taskId: String = UUID.randomUUID().toString(),
 
     @ColumnInfo(name = "user_id")
-    val userId: Long,
-
+    val userId: String,
     val title: String,
     val description: String? = null,
     val status: TaskStatus = TaskStatus.PENDING,

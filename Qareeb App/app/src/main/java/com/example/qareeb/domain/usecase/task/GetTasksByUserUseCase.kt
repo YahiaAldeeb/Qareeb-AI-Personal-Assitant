@@ -4,5 +4,5 @@ import com.example.qareeb.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow
 
 class GetTasksByUserUseCase(private val taskRepo: TaskRepository) {
-    operator fun invoke(userId: Long): Flow<List<TaskDomain>> = taskRepo.getTasksByUser(userId)
+    operator fun invoke(userId: String): Flow<List<TaskDomain>> = taskRepo.getTasksByUser(userId)
 }

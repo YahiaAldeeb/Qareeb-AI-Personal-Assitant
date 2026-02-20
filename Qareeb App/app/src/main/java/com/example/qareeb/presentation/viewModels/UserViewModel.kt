@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.qareeb.presentation.utilis.SessionManager
 
 class UserViewModel(private val sessionManager: SessionManager) : ViewModel() {
-    val userId: Long get() = sessionManager.getUserId()
+    val userId: String? get() = sessionManager.getUserId()
     val username: String get() = sessionManager.getUsername() ?: "Guest"
 }
 class UserViewModelFactory(private val sessionManager:SessionManager) : ViewModelProvider.Factory {

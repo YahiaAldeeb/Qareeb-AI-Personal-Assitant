@@ -22,7 +22,7 @@ class FinanceViewModel(
     private val updateTransaction: UpdateTransactionUseCase,
     private val addTransaction: AddTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
-    private val userId: Long,
+    private val userId: String,
     val username: String
 ) : ViewModel() {
 
@@ -88,7 +88,7 @@ class FinanceViewModelFactory(
     private val updateTransaction: UpdateTransactionUseCase,
     private val addTransaction: AddTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
-    private val userId: Long,
+    private val userId: String,
     private val username: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

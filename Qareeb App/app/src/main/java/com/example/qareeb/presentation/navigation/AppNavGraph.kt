@@ -31,6 +31,7 @@ import com.example.qareeb.presentation.viewModels.UserViewModel
 import com.example.qareeb.presentation.viewModels.UserViewModelFactory
 
 object Routes {
+    const val SPLASH = "splash"
     const val DASHBOARD = "dashboard"
     const val TASKS = "task_tracker"
     const val CHATBOT = "chatbot"
@@ -49,8 +50,10 @@ fun AppNavGraph(
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(sessionManager)
     )
-    val userId = userViewModel.userId
-    val username = userViewModel.username
+
+    // handle nullable safely with fallback values
+    val userId = userViewModel.userId ?: ""
+    val username = userViewModel.username ?: "Guest"
 
     // ── Use Cases ──
     val getTasksByUser = GetTasksByUserUseCase(taskRepo)
@@ -65,10 +68,22 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = Routes.DASHBOARD,
+        startDestination = Routes.SPLASH,
         modifier = modifier
     ) {
 
+//        // ── Splash ──
+//        composable(Routes.SPLASH) {
+//            SplashScreen(
+//                onSplashFinished = {
+//                    navController.navigate(Routes.DASHBOARD) {
+//                        popUpTo(Routes.SPLASH) { inclusive = true }
+//                    }
+//                }
+//            )
+//        }
+
+        // ── Dashboard ──
         composable(Routes.DASHBOARD) {
             val vm: DashboardViewModel = viewModel(
                 factory = DashboardViewModelFactory(
@@ -85,6 +100,7 @@ fun AppNavGraph(
             )
         }
 
+        // ── Tasks ──
         composable(Routes.TASKS) {
             val vm: TaskViewModel = viewModel(
                 factory = TaskViewModelFactory(
@@ -99,6 +115,7 @@ fun AppNavGraph(
             TasksScreen(viewModel = vm)
         }
 
+        // ── Finance ──
         composable(Routes.FINANCE) {
             val vm: FinanceViewModel = viewModel(
                 factory = FinanceViewModelFactory(
@@ -113,6 +130,7 @@ fun AppNavGraph(
             FinanceScreen(viewModel = vm)
         }
 
+        // ── ChatBot ──
         composable(Routes.CHATBOT) {
             ChatBotScreen()
         }

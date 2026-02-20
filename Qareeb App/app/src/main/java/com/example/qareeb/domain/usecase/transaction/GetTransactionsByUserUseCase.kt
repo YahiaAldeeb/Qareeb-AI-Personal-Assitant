@@ -5,5 +5,5 @@ import com.example.qareeb.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 
 class GetTransactionsByUserUseCase(private val transactionRepo: TransactionRepository) {
-     operator fun invoke(userId: Long) = transactionRepo.getTransactionsByUser(userId)
+     operator fun invoke(userId: String) = transactionRepo.getTransactionsByUser(userId)
 }

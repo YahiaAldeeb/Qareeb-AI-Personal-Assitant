@@ -2,6 +2,7 @@ package com.example.qareeb.data.entity
 
 import androidx.room.*
 import com.example.qareeb.domain.model.enums.TransactionState
+import java.util.UUID
 
 @Entity(
     tableName = "transaction",
@@ -22,15 +23,15 @@ import com.example.qareeb.domain.model.enums.TransactionState
     indices = [Index("user_id"), Index("category_id")]
 )
 data class Transaction(
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     @ColumnInfo(name = "transaction_id")
-    val transactionId: Long = 0,
+    val transactionId: String = UUID.randomUUID().toString(),
 
     @ColumnInfo(name = "user_id")
-    val userId: Long,
+    val userId: String,
 
     @ColumnInfo(name = "category_id")
-    val categoryId: Long? = null,
+    val categoryId: String? = null,
 
     val amount: Double,
     val date: Long = System.currentTimeMillis(),

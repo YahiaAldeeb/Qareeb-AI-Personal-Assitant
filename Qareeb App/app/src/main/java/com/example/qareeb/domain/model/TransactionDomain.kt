@@ -3,8 +3,8 @@ package com.example.qareeb.domain.model
 import com.example.qareeb.domain.model.enums.TransactionState
 
 data class TransactionDomain(
-    val transactionId: Long = 0,
-    val userId: Long,
+    val transactionId: String,
+    val userId: String,
 
     val amount: Double,
     val date: Long = System.currentTimeMillis(),
@@ -17,6 +17,6 @@ data class TransactionDomain(
 
     // Transaction state using enum: "completed", "declined", "pending", "in_progress"
     val state: TransactionState = TransactionState.PENDING,
-    val categoryId: Long? = null,
+    val categoryId: String? = null,
 
     )

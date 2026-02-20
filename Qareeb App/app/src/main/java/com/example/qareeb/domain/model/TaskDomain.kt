@@ -2,8 +2,8 @@ package com.example.qareeb.domain.model
 import com.example.qareeb.domain.model.enums.TaskStatus
 
 data class TaskDomain(
-    val taskId: Long = 0,
-    val userId: Long,
+    val taskId: String,
+    val userId: String,
     val title: String,
     val description: String? = null,
     val status: TaskStatus = TaskStatus.PENDING,

@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     @Query("SELECT * FROM task WHERE user_id = :userId ORDER BY created_at DESC")
-    fun getTasksByUser(userId: Long): Flow<List<Task>>
+    fun getTasksByUser(userId: String): Flow<List<Task>>
 
     @Query("SELECT * FROM task WHERE user_id = :userId AND status = :status")
-    fun getTasksByStatus(userId: Long, status: TaskStatus): Flow<List<Task>>
+    fun getTasksByStatus(userId: String, status: TaskStatus): Flow<List<Task>>
 
     @Insert
     suspend fun insertTask(task: Task): Long

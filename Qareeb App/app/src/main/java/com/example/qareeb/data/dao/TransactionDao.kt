@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TransactionDao {
     @Query("SELECT * FROM `transaction` WHERE user_id = :userId ORDER BY date DESC")
-    fun getTransactionsByUser(userId: Long): Flow<List<Transaction>>
+    fun getTransactionsByUser(userId: String): Flow<List<Transaction>>
 
     @Query("SELECT * FROM `transaction` WHERE user_id = :userId AND category_id = :categoryId")
-    fun getTransactionsByCategory(userId: Long, categoryId: Long): Flow<List<Transaction>>
+    fun getTransactionsByCategory(userId: String, categoryId: String): Flow<List<Transaction>>
 
     @Insert
     suspend fun insertTransaction(transaction: Transaction): Long

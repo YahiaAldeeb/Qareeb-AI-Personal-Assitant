@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.map
 
 class UserRepositoryImpl(private val userDao: UserDao) : UserRepository {
 
-    override fun getUserById(userId: Long): Flow<UserDomain?> {
+    override fun getUserById(userId: String): Flow<UserDomain?> {
         return userDao.getUserById(userId).map { it?.toDomain() }
     }
 

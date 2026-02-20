@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 
 class TaskRepositoryImpl(private val taskDao: TaskDao) : TaskRepository {
 
-    override fun getTasksByUser(userId: Long): Flow<List<TaskDomain>> {
+    override fun getTasksByUser(userId: String): Flow<List<TaskDomain>> {
         return taskDao.getTasksByUser(userId).map { list ->
             list.map { it.toDomain() }  // TaskEntity → domain Task
         }
@@ -31,7 +31,7 @@ class TaskRepositoryImpl(private val taskDao: TaskDao) : TaskRepository {
     }
 
     override fun getTasksByStatus(
-        userId: Long,
+        userId: String,
         status: TaskStatus
     ): Flow<List<TaskDomain>> {
         return taskDao.getTasksByStatus(userId,status).map { list ->
