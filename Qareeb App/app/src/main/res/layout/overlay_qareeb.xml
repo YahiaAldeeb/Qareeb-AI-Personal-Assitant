@@ -1,43 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlay_container"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="16dp">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_glass_card"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:elevation="10dp">
-
-        <ImageView
-            android:id="@+id/iv_mic_icon"
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:src="@android:drawable/ic_btn_speak_now"
-            android:contentDescription="Microphone"
-            app:tint="#00E5FF"
-            xmlns:app="http://schemas.android.com/apk/res-auto"/>
-
-        <TextView
-            android:id="@+id/tv_overlay_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Hi, I'm Qareeb..."
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Listening..."
-            android:textColor="#AAAAAA"
-            android:textSize="14sp" />
-
-    </LinearLayout>
-</FrameLayout>
+    android:layout_height="match_parent"
+    android:background="@drawable/edge_glow_listening"
+    android:clickable="false"
+    android:focusable="false" />

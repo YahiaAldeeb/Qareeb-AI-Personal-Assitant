@@ -57,7 +57,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation("ai.picovoice:porcupine-android:3.0.1")
     implementation("com.airbnb.android:lottie:6.1.0")
-
+    implementation("com.alphacephei:vosk-android:0.3.47")
     //Database
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
