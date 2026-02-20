@@ -5,4 +5,4 @@ enum class TransactionState {
         DECLINED,
         PENDING,
         IN_PROGRESS
-    }
+}

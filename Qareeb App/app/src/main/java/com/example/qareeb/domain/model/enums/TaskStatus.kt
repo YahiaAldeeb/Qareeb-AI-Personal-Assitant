@@ -1,6 +1,6 @@
 package com.example.qareeb.domain.model.enums
 
-enum class TaskStatus {
+enum class TaskStatus{
     COMPLETED,
     POSTPONED,
     PENDING,

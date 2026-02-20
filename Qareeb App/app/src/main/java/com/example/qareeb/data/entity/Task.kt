@@ -36,5 +36,9 @@ data class Task(
     val priority: String? = null,
 
     @ColumnInfo(name = "due_date")
-    val dueDate: Long? = null
+    val dueDate: Long? = null,
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: String = System.currentTimeMillis().toString(),
+    @ColumnInfo(name = "is_deleted")
+    val isDeleted: Boolean = false
 )

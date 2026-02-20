@@ -49,6 +49,18 @@ class MainActivity : ComponentActivity() {
         val sessionManager = SessionManager.getInstance(this)
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
+
+        val userId = sessionManager.getUserId()
+        if (!userId.isNullOrEmpty()) {
+            lifecycleScope.launch {
+                val syncRepo = SyncRepository(
+                    taskDao = db.taskDao(),
+                    api = RetrofitInstance.api,
+                    prefs = getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
+                )
+                syncRepo.sync(userId)
+            }
+
         setContent {
             // This is your Compose UI Entry Point
             MainScaffold(sessionManager = sessionManager,

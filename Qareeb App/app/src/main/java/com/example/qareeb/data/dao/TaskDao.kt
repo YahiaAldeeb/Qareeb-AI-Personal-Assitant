@@ -2,7 +2,7 @@ package com.example.qareeb.data.dao
 
 import androidx.room.*
 import com.example.qareeb.data.entity.Task
-import com.example.qareeb.domain.model.enums.TaskStatus
+import com.example.qareeb.domain.model.enums.
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -21,4 +21,15 @@ interface TaskDao {
 
     @Delete
     suspend fun deleteTask(task: Task)
+
+    @Query("SELECT * FROM task WHERE user_id = :userId AND is_deleted = 0")
+    suspend fun getTasksByUserOneShot(userId: String): List<Task>
+
+    // upsert — insert or replace if exists
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTask(task: Task)
+
+    // delete by id for soft deletes
+    @Query("DELETE FROM task WHERE task_id = :taskId")
+    suspend fun deleteTaskById(taskId: String)
 }
