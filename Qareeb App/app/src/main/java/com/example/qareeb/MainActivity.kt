@@ -1,6 +1,7 @@
 package com.example.qareeb
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -24,11 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import com.example.qareeb.data.AppDatabase
+import com.example.qareeb.data.remote.RetrofitInstance
+import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.presentation.MainScaffold
 import com.example.qareeb.presentation.utilis.SessionManager
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -60,6 +65,7 @@ class MainActivity : ComponentActivity() {
                 )
                 syncRepo.sync(userId)
             }
+        }
 
         setContent {
             // This is your Compose UI Entry Point

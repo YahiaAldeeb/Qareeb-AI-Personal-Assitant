@@ -1,11 +1,12 @@
 package com.example.qareeb.data.remote
 
 import android.content.SharedPreferences
+import com.example.qareeb.data.dao.TaskDao
 import com.example.qareeb.data.entity.Task
 import com.example.qareeb.data.dao.TaskDao_Impl
 
 class SyncRepository(
-    private val taskDao: TaskDao_Impl,
+    private val taskDao: TaskDao,
     private val api: SyncApi,
     private val prefs: SharedPreferences  // to store last sync time
 ) {
