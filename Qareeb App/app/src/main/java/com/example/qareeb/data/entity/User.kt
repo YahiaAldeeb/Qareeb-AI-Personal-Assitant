@@ -2,6 +2,8 @@ package com.example.qareeb.data.entity
 
 import androidx.room.*
 
+
+@Entity(tableName = "user")
 data class User(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "user_id")
