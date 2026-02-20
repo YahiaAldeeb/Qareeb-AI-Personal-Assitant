@@ -3,6 +3,7 @@ package com.example.qareeb.data.entity
 import androidx.room.*
 import java.util.UUID
 
+
 @Entity(tableName = "user")
 data class User(
     @PrimaryKey
