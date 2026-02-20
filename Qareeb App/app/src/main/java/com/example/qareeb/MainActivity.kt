@@ -23,11 +23,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.data.AppDatabase
+import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
+import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.presentation.MainScaffold
-import com.example.qareeb.presentation.screens.DashboardScreen
-import com.example.qareeb.presentation.ui.components.FancyGradientBackground
-import com.example.qareeb.screens.MyFinanceScreen
-import com.example.qareeb.screens.MyTasksScreen
+import com.example.qareeb.presentation.utilis.SessionManager
 
 class MainActivity : ComponentActivity() {
 
@@ -41,9 +41,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val db = AppDatabase.getDatabase(this)
+        val sessionManager = SessionManager.getInstance(this)
+        val taskRepo = TaskRepositoryImpl(db.taskDao())
+        val financeRepo = TransactionRepositoryImpl(db.transactionDao())
         setContent {
             // This is your Compose UI Entry Point
-            MainScaffold()
+            MainScaffold(sessionManager = sessionManager,
+                taskRepo = taskRepo,
+                financeRepo = financeRepo)
 
 //            FancyGradientBackground {
 //                MyFinanceScreen("Farida")

@@ -13,7 +13,7 @@ import androidx.compose.ui.res.painterResource
 import com.example.qareeb.R
 
 @Composable
-fun FancyGradientBackground(content: @Composable () -> Unit) {
+fun AppBackground(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         // 1. Horizontal gradient background
         Box(

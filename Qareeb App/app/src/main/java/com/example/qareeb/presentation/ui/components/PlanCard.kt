@@ -26,15 +26,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
-import com.example.qareeb.presentation.mapper.toUI
-import com.example.qareeb.presentation.screens.TaskUi
+import com.example.qareeb.domain.model.TaskDomain
+import com.example.qareeb.presentation.mapperr.toUI
 import com.example.qareeb.presentation.utilis.formatDate
 import com.example.qareeb.presentation.theme.interFamily
-import com.example.qareeb.screens.TasksUi
 
 @Composable
-fun PlanCard(plan: TasksUi) {
-    val stateUI = plan.status.toUI()
+fun PlanCard(task: TaskDomain) {
+    val stateUI = task.status.toUI()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -56,7 +55,7 @@ fun PlanCard(plan: TasksUi) {
                         contentDescription = null,
                         Modifier.size(25.dp)
                     )
-                    Text("TASK-"+plan.taskId, fontWeight = FontWeight.Light, color = Color(0xFF726B81))
+                    Text("TASK-"+task.taskId, fontWeight = FontWeight.Light, color = Color(0xFF726B81))
                     Spacer(Modifier.width(120.dp))
                     Surface(
                         border = BorderStroke(1.dp, stateUI.color),
@@ -73,7 +72,7 @@ fun PlanCard(plan: TasksUi) {
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                Text(plan.title, fontFamily = interFamily,fontSize=16.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+                Text(task.title, fontFamily = interFamily,fontSize=16.sp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.weight(1f)) {
                     Image(
@@ -84,7 +83,7 @@ fun PlanCard(plan: TasksUi) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = plan.dueDate?.let { formatDate(it) } ?: "No due date",
+                        text = task.dueDate?.let { formatDate(it) } ?: "No due date",
                         fontSize = 12.sp,
                         color = Color.Black,
                         fontFamily = interFamily,

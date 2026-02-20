@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun MiniCardCompleted(modifier: Modifier = Modifier) {
+fun MiniCardCompleted(modifier: Modifier = Modifier, count: Int) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color(0xFF111827)),
@@ -32,7 +32,7 @@ fun MiniCardCompleted(modifier: Modifier = Modifier) {
             Column(Modifier.padding(14.dp)) {
                 Text("Completed Tasks", color = Color.White, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text("11 Tasks Done", color = Color.White, fontSize = 12.sp)
+                Text("$count Tasks Done", color = Color.White, fontSize = 12.sp)
                 Spacer(Modifier.height(8.dp))
 
             }

@@ -16,18 +16,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
-import com.example.qareeb.data.entity.TaskStatus
+import com.example.qareeb.domain.model.TaskDomain
+import com.example.qareeb.domain.model.enums.TaskStatus
 import com.example.qareeb.presentation.mapper.toUI
+import com.example.qareeb.presentation.mapperr.toUI
 import com.example.qareeb.presentation.theme.interFamily
 import com.example.qareeb.presentation.utilis.formatDate
-import com.example.qareeb.screens.TasksUi
 
 @Composable
 fun PlanCardTask(
-    plan: TasksUi,
-    onStatusChange: (TasksUi, TaskStatus) -> Unit
+    task: TaskDomain,
+    onStatusChange: (TaskDomain, TaskStatus) -> Unit
 ) {
-    val stateUI = plan.status.toUI()
+    val stateUI = task.status.toUI()
     var expanded by remember { mutableStateOf(false) }
 
     val options = listOf(
@@ -61,7 +62,7 @@ fun PlanCardTask(
                     )
 
                     Text(
-                        text = "TASK-" + plan.taskId,
+                        text = "TASK-" + task.taskId,
                         fontWeight = FontWeight.Light,
                         color = Color(0xFF726B81),
                         fontFamily = interFamily,
@@ -104,7 +105,7 @@ fun PlanCardTask(
                                     },
                                     onClick = {
                                         expanded = false
-                                        onStatusChange(plan, newState)
+                                        onStatusChange(task, newState)
                                     }
                                 )
                             }
@@ -116,7 +117,7 @@ fun PlanCardTask(
 
                 // TITLE
                 Text(
-                    text = plan.title,
+                    text = task.title,
                     fontFamily = interFamily,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
@@ -135,7 +136,7 @@ fun PlanCardTask(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = plan.dueDate?.let { formatDate(it) } ?: "No due date",
+                        text = task.dueDate?.let { formatDate(it) } ?: "No due date",
                         fontSize = 12.sp,
                         color = Color.Black,
                         fontFamily = interFamily,

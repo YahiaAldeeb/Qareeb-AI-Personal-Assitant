@@ -1,7 +1,7 @@
 package com.example.qareeb.presentation.mapper
 
 
-import com.example.qareeb.data.entity.TransactionState
+import com.example.qareeb.domain.model.enums.TransactionState
 import com.example.qareeb.presentation.models.TransactionStateUI
 
 

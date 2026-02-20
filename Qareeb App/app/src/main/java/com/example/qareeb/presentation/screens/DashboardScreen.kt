@@ -4,129 +4,53 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-
 import androidx.compose.foundation.shape.RoundedCornerShape
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.qareeb.data.entity.TaskStatus
-import com.example.qareeb.data.entity.TransactionState
 import com.example.qareeb.presentation.theme.QareebTheme
-import java.time.LocalDate
+import com.example.qareeb.presentation.ui.components.*
 import com.example.qareeb.presentation.utilis.toLocalDate
-import com.example.qareeb.presentation.ui.components.BigTasksBanner
-import com.example.qareeb.presentation.ui.components.ExpenseRow
-import com.example.qareeb.presentation.ui.components.FancyGradientBackground
-import com.example.qareeb.presentation.ui.components.MiniCardCompleted
-import com.example.qareeb.presentation.ui.components.MiniCardPriority
-import com.example.qareeb.presentation.ui.components.SearchBarStub
-import com.example.qareeb.presentation.ui.components.SectionTitle
-import com.example.qareeb.presentation.ui.components.WeekChipsRow
-import com.example.qareeb.presentation.ui.components.WelcomeBanner
+import com.example.qareeb.presentation.viewModels.DashboardViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
-data class TaskUi(
-    val taskId: Long,
-    val title: String,
-    val dueDate: Long?,
-    val status: TaskStatus // reuse your enum
-)
-
-data class ExpenseItem(
-    val title: String,
-    val status: TransactionState,
-    val amount: Double,
-    val date: Long = System.currentTimeMillis(),
-    val source: String? = null,
-    val description: String? = null,
-    val income: Boolean
-)
 @Composable
 fun DashboardScreen(
-    username: String = "Manar",
-    todayLabel: String = "08 June 2025",
-    tasksCount: Int = 8
+    viewModel: DashboardViewModel,
+    onViewAllPlans: () -> Unit,
+    onViewAllExpenses: () -> Unit
 ) {
-    val plans = remember {
-        listOf(
-            TaskUi(
-                taskId = 1,
-                title = "Meeting at work",
-                status = TaskStatus.IN_PROGRESS,
-                dueDate = System.currentTimeMillis()
-            ),
-            TaskUi(
-                taskId = 2,
-                title = "Dinner with Ahmed",
-                status = TaskStatus.COMPLETED,
-                dueDate = System.currentTimeMillis() + 86_400_000
-            ),
-            TaskUi(
-                taskId = 3,
-                title = "Tennis Training",
-                status = TaskStatus.POSTPONED,
-                dueDate = System.currentTimeMillis() + 2 * 86_400_000
-            )
-        )
+    val selectedDate by viewModel.selectedDate.collectAsState()
+    val todayTasks by viewModel.todayTasks.collectAsState()
+    val todayTasksCount by viewModel.todayTasksCount.collectAsState()
+    val priorityTasksCount by viewModel.priorityTasksCount.collectAsState()
+    val completedTasksCount by viewModel.completedTasksCount.collectAsState()
+    val recentTransactions by viewModel.recentTransactions.collectAsState()
+    val priorityTasks by viewModel.priorityTasks.collectAsState()
+
+    // formats date as "20 February 2026"
+    val todayLabel = remember(selectedDate) {
+        selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
     }
 
-
-    val expenses = remember {
-        listOf(
-            ExpenseItem(
-                title = "Expert Consultation",
-                status = TransactionState.COMPLETED,
-                amount = 150.00,
-                date = 1704067200000L,// 01 Jan 2024 (example timestamp),
-                income=false
-            ),
-            ExpenseItem(
-                title = "Office Supplies",
-                status = TransactionState.DECLINED,
-
-                amount = 45.00,
-                date = 1704067200000L,
-                income=true
-            ),
-            ExpenseItem(
-                title = "Website Redesign",
-                status = TransactionState.IN_PROGRESS,
-
-                amount = 2500.00,
-                date = 1704067200000L,
-                income = true
-            )
-        )
-    }
-
-
-
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-
-
-    Scaffold(
-        containerColor = Color.Transparent,
-        //bottomBar = { BottomNavBar() },
-    ) { padding ->
-
-        FancyGradientBackground {
+    Scaffold(containerColor = Color.Transparent) { padding ->
+        AppBackground {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = padding.calculateBottomPadding())
             ) {
-                // Header (on gradient)
-                WelcomeBanner(username = username)
-
+                // ── Header ──
+                WelcomeBanner(username = viewModel.username)
                 Spacer(Modifier.height(20.dp))
-                // White background sheet
+
+                // ── White Sheet ──
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -135,15 +59,14 @@ fun DashboardScreen(
                             shape = RoundedCornerShape(topStart = 80.dp, topEnd = 80.dp)
                         )
                 ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+
+                        // ── Stats Banner ──
                         item {
                             BigTasksBanner(
-                                tasksCount = tasksCount,
-                                todayLabel = todayLabel
+                                tasksCount = todayTasksCount,
+                                todayLabel = todayLabel  // "20 February 2026"
                             )
-
                             Spacer(Modifier.height(16.dp))
 
                             Row(
@@ -152,89 +75,121 @@ fun DashboardScreen(
                                     .fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                MiniCardPriority(modifier = Modifier.weight(1f))
-                                MiniCardCompleted(modifier = Modifier.weight(1f))
+                                MiniCardPriority(
+                                    modifier = Modifier.weight(1f),
+                                    tasks=priorityTasks
+                                )
+                                MiniCardCompleted(
+                                    modifier = Modifier.weight(1f),
+                                    count = completedTasksCount
+                                )
                             }
 
                             Spacer(Modifier.height(18.dp))
                             SearchBarStub()
                             Spacer(Modifier.height(14.dp))
 
+                            // ── Week Chips ──
                             WeekChipsRow(
                                 selectedDate = selectedDate,
-                                onSelect = { selectedDate = it }
+                                onSelect = { viewModel.onDateSelected(it) }
                             )
-
                             Spacer(Modifier.height(24.dp))
                         }
 
-                        // ================= TODAY'S PLANS (WHITE CARD) =================
+                        // ── Today's Plans ──
                         item {
                             Box(
                                 modifier = Modifier
                                     .padding(horizontal = 16.dp)
                                     .fillMaxWidth()
-                                    .background(
-                                        color = Color.White,
-                                        shape = RoundedCornerShape(20.dp)
-                                    )
+                                    .background(Color.White, RoundedCornerShape(20.dp))
                                     .padding(vertical = 16.dp)
                             ) {
                                 Column {
                                     SectionTitle(
-                                        title = selectedDate.dayOfWeek.toString() + " PLANS",
+                                        title = "${selectedDate.dayOfWeek} PLANS"
                                     )
-
                                     Spacer(Modifier.height(15.dp))
 
-                                    plans.forEach { plan ->
-                                        if (plan.dueDate?.toLocalDate() == selectedDate) {
-                                            //PlanCard(plan = plan)
+                                    if (todayTasks.isEmpty()) {
+                                        Text(
+                                            text = "No tasks for this day",
+                                            modifier = Modifier.padding(horizontal = 16.dp),
+                                            color = Color.Gray
+                                        )
+                                    } else {
+                                        todayTasks.forEach { task ->
+                                            PlanCard(task = task)
                                             Spacer(Modifier.height(8.dp))
                                         }
                                     }
+
                                     Spacer(Modifier.height(15.dp))
-                                    Box(Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
-                                        .background(Color.White, shape = RoundedCornerShape(4.dp))
-                                        .border(1.dp, color = Color(0xFFECECEC))
-                                    ){
-                                        TextButton(onClick = {},modifier = Modifier.fillMaxWidth()) { Text("View All Plans", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp)
+                                            .background(Color.White, RoundedCornerShape(4.dp))
+                                            .border(1.dp, Color(0xFFECECEC))
+                                    ) {
+                                        TextButton(
+                                            onClick = onViewAllPlans,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                "View All Plans",
+                                                color = Color.Black,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        // ================= TODAY'S EXPENSES (WHITE CARD) =================
+                        // ── Recent Expenses ──
                         item {
                             Spacer(Modifier.height(20.dp))
-
                             Box(
                                 modifier = Modifier
                                     .padding(horizontal = 16.dp)
                                     .fillMaxWidth()
-                                    .background(
-                                        color = Color.White,
-                                        shape = RoundedCornerShape(20.dp)
-                                    )
+                                    .background(Color.White, RoundedCornerShape(20.dp))
                                     .padding(vertical = 16.dp)
                             ) {
                                 Column {
-                                    SectionTitle(
-                                        title = "Recent Expenses",
-                                    )
-
+                                    SectionTitle(title = "Recent Expenses")
                                     Spacer(Modifier.height(12.dp))
 
-                                    expenses.forEach { ex ->
-                                        //ExpenseRow(item = ex)
-                                        Spacer(Modifier.height(8.dp))
+                                    if (recentTransactions.isEmpty()) {
+                                        Text(
+                                            text = "No recent transactions",
+                                            modifier = Modifier.padding(horizontal = 16.dp),
+                                            color = Color.Gray
+                                        )
+                                    } else {
+                                        recentTransactions.forEach { transaction ->
+                                            ExpenseRow(transaction = transaction)
+                                            Spacer(Modifier.height(8.dp))
+                                        }
                                     }
-                                    TextButton(onClick = { /* Handle click */ },
-                                        modifier = Modifier.fillMaxWidth()) { Text("View All Expenses", color = Color.Black, fontWeight = FontWeight.Bold,textAlign= TextAlign.Center) }
+
+                                    TextButton(
+                                        onClick = onViewAllExpenses,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            "View All Expenses",
+                                            color = Color.Black,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
                                 }
                             }
+                            Spacer(Modifier.height(20.dp))
                         }
                     }
                 }
@@ -242,10 +197,17 @@ fun DashboardScreen(
         }
     }
 }
+
+// ── Preview ──
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun DashboardPreview() {
     QareebTheme {
-        DashboardScreen()
+        // fake static data just for preview
+        DashboardScreen(
+            viewModel = TODO("use a fake ViewModel or split into DashboardContent"),
+            onViewAllPlans = {},
+            onViewAllExpenses = {}
+        )
     }
 }

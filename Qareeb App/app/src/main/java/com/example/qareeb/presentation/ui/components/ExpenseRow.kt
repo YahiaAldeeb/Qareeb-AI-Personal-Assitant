@@ -19,14 +19,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.domain.model.TransactionDomain
 import com.example.qareeb.presentation.mapper.toUI
 import com.example.qareeb.presentation.theme.interFamily
 import com.example.qareeb.presentation.utilis.formatDate
-import com.example.qareeb.screens.ExpensesItem
 
 @Composable
-fun ExpenseRow(item: ExpensesItem) {
-    val stateUI = item.status.toUI()
+fun ExpenseRow(transaction: TransactionDomain) {
+    val stateUI = transaction.state.toUI()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -38,7 +38,7 @@ fun ExpenseRow(item: ExpensesItem) {
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = item.title,
+                text = transaction.title,
                 fontFamily = interFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 16.sp,
@@ -50,7 +50,7 @@ fun ExpenseRow(item: ExpensesItem) {
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = formatDate(item.date),
+                text = formatDate(transaction.date),
                 fontFamily = interFamily,
                 fontSize = 12.sp,
                 color = Color.Gray,
@@ -69,7 +69,7 @@ fun ExpenseRow(item: ExpensesItem) {
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text(
-                    text = item.status.name.replace("_", " "),
+                    text = transaction.state.name.toString(),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     color = stateUI.color,
                     fontSize = 12.sp,
@@ -79,11 +79,11 @@ fun ExpenseRow(item: ExpensesItem) {
             }
 
             Text(
-                text = "${item.amount}$",
+                text = "${transaction.amount}$",
                 fontFamily = interFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
-                color = if (item.income) Color(0xFF00A63E) else Color(0xFFA62700)
+                color = if (transaction.income) Color(0xFF00A63E) else Color(0xFFA62700)
             )
         }
     }

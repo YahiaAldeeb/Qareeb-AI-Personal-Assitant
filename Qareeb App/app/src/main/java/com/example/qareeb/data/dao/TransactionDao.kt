@@ -2,7 +2,7 @@ package com.example.qareeb.data.dao
 
 import androidx.room.*
 import com.example.qareeb.data.entity.Transaction
-import com.example.qareeb.data.entity.TransactionState
+import com.example.qareeb.domain.model.enums.TransactionState
 import kotlinx.coroutines.flow.Flow
 
 @Dao

@@ -15,17 +15,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.qareeb.data.entity.TransactionState
+import com.example.qareeb.domain.model.TransactionDomain
+import com.example.qareeb.domain.model.enums.TransactionState
 import com.example.qareeb.presentation.mapper.toUI
 import com.example.qareeb.presentation.theme.dmSansFamily
-import com.example.qareeb.screens.ExpensesItem
 
 @Composable
 fun TransactionBox(
     title: String,
-    transactions: List<ExpensesItem>,
+    transactions: List<TransactionDomain>,
     emptyMessage: String,
-    onStatusChange: (ExpensesItem, TransactionState) -> Unit
+    onStatusChange: (TransactionDomain, TransactionState) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -57,8 +57,6 @@ fun TransactionBox(
                     )
                 } else {
                     transactions.forEach { expense ->
-
-
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -75,7 +73,7 @@ fun TransactionBox(
                             ) {
 
                                 Box(modifier = Modifier.weight(1f)) {
-                                    ExpenseRowFinance(item = expense)
+                                    ExpenseRowFinance(transaction = expense)
                                 }
 
                                 Spacer(Modifier.width(10.dp))
@@ -95,7 +93,7 @@ fun TransactionBox(
                                     Spacer(Modifier.width(10.dp))
 
                                     StatusDropdownPill(
-                                        current = expense.status,
+                                        current = expense.state,
                                         onSelect = { newState ->
                                             onStatusChange(expense, newState)
                                         }

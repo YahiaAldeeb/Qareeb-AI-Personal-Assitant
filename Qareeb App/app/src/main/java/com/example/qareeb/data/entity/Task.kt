@@ -1,13 +1,8 @@
 package com.example.qareeb.data.entity
 
 import androidx.room.*
+import com.example.qareeb.domain.model.enums.TaskStatus
 
-enum class TaskStatus {
-    COMPLETED,
-    POSTPONED,
-    PENDING,
-    IN_PROGRESS
-}
 @Entity(
     tableName = "task",
     foreignKeys = [

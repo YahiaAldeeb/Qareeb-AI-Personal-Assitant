@@ -22,9 +22,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.qareeb.domain.model.TaskDomain
+import com.example.qareeb.domain.model.enums.TaskStatus
 
 @Composable
-fun MiniCardPriority(modifier: Modifier = Modifier) {
+fun MiniCardPriority(
+    modifier: Modifier = Modifier,
+    tasks: List<TaskDomain> = emptyList()
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
@@ -35,12 +40,27 @@ fun MiniCardPriority(modifier: Modifier = Modifier) {
                 .fillMaxWidth()
                 .height(110.dp),
             cornerRadius = 18
-        ){
+        ) {
             Column(Modifier.padding(14.dp)) {
-                Text("Priority Tasks", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                Text(
+                    "Priority Tasks",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
                 Spacer(Modifier.height(8.dp))
-                PriorityItem("Meeting", true)
-                PriorityItem("Email", false)
+
+                if (tasks.isEmpty()) {
+                    Text("No priority tasks", fontSize = 12.sp, color = Color.White)
+                } else {
+                    // show max 2 tasks to fit the card height
+                    tasks.take(2).forEach { task ->
+                        PriorityItem(
+                            label = task.title,
+                            checked = task.status == TaskStatus.COMPLETED
+                        )
+                    }
+                }
             }
         }
     }

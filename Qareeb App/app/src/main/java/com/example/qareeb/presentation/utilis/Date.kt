@@ -25,6 +25,10 @@ fun buildNext7DaysFromToday(today: LocalDate): List<DayItem> {
         )
     }
 }
+fun todayLabel(): String {
+    val sdf = SimpleDateFormat("dd MMM yy", Locale.ENGLISH) // e.g. "19 Feb 26"
+    return sdf.format(Date())
+}
 fun formatDate(timestamp: Long): String {
     val formatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     return formatter.format(Date(timestamp))

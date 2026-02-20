@@ -2,7 +2,7 @@ package com.example.qareeb.data.dao
 
 import androidx.room.*
 import com.example.qareeb.data.entity.Task
-import com.example.qareeb.data.entity.TaskStatus
+import com.example.qareeb.domain.model.enums.TaskStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao

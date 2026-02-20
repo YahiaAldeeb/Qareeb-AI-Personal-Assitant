@@ -1,6 +1,5 @@
-package com.example.qareeb.presentation.mapper
-
-import com.example.qareeb.data.entity.TaskStatus
+package com.example.qareeb.presentation.mapperr
+import com.example.qareeb.domain.model.enums.TaskStatus
 import com.example.qareeb.presentation.models.TaskStateUI
 
 fun TaskStatus.toUI(): TaskStateUI {
