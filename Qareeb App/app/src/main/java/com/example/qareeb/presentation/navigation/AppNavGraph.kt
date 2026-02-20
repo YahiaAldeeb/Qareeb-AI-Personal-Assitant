@@ -17,6 +17,7 @@ import com.example.qareeb.domain.usecase.transaction.DeleteTransactionUseCase
 import com.example.qareeb.domain.usecase.transaction.GetTransactionsByUserUseCase
 import com.example.qareeb.domain.usecase.transaction.UpdateTransactionUseCase
 import com.example.qareeb.presentation.screens.ChatBotScreen
+import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.screens.DashboardScreen
 import com.example.qareeb.presentation.screens.FinanceScreen
 import com.example.qareeb.presentation.screens.TasksScreen
@@ -46,16 +47,12 @@ fun AppNavGraph(
     financeRepo: TransactionRepositoryImpl,
     modifier: Modifier = Modifier
 ) {
-    // ── Shared User ViewModel ──
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(sessionManager)
     )
-
-    // handle nullable safely with fallback values
     val userId = userViewModel.userId ?: ""
     val username = userViewModel.username ?: "Guest"
 
-    // ── Use Cases ──
     val getTasksByUser = GetTasksByUserUseCase(taskRepo)
     val addTask = AddTaskUseCase(taskRepo)
     val updateTask = UpdateTaskUseCase(taskRepo)
@@ -72,16 +69,16 @@ fun AppNavGraph(
         modifier = modifier
     ) {
 
-//        // ── Splash ──
-//        composable(Routes.SPLASH) {
-//            SplashScreen(
-//                onSplashFinished = {
-//                    navController.navigate(Routes.DASHBOARD) {
-//                        popUpTo(Routes.SPLASH) { inclusive = true }
-//                    }
-//                }
-//            )
-//        }
+        // ── Splash ──
+        composable(Routes.SPLASH) {
+            SplashScreen(
+                onSplashFinished = {
+                    navController.navigate(Routes.DASHBOARD) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                }
+            )
+        }
 
         // ── Dashboard ──
         composable(Routes.DASHBOARD) {
