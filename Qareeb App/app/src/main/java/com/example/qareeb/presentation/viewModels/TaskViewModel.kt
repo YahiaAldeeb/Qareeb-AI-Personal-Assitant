@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -29,6 +30,10 @@ class TaskViewModel(
 
     val filters = listOf("All", "Work", "Sports", "Personal", "Travel")
 
+    init {
+        android.util.Log.d("VIEWMODEL", "ViewModel userId: $userId")
+    }
+
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate
 
@@ -37,6 +42,7 @@ class TaskViewModel(
 
     // ── Raw tasks from DB ──
     private val allTasks: StateFlow<List<TaskDomain>> = getTasksByUser(userId)
+        .onEach { android.util.Log.d("VIEWMODEL", "Tasks loaded: ${it.size}") }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // ── Today's tasks filtered by selected date and category ──

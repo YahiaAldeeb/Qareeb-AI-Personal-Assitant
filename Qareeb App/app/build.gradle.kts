@@ -47,7 +47,8 @@ android {
 }
 
 dependencies {
-
+    // build.gradle
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     /* ---------------- Core Android ---------------- */
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -95,6 +96,13 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     /* ---------------- Database (Room) ---------------- */
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    implementation("ai.picovoice:porcupine-android:3.0.1")
+    implementation("com.airbnb.android:lottie:6.1.0")
+    implementation("com.alphacephei:vosk-android:0.3.47")
+    //Database
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")

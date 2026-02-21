@@ -7,13 +7,13 @@ import retrofit2.http.Query
 
 interface SyncApi {
 
-    @GET("/sync/pull")
+    @GET("sync/pull")
     suspend fun pull(
-        @Query("userID") userId: String,
+        @Query("user_id") userId: String,
         @Query("last_sync") lastSync: String
     ): PullResponse
 
-    @POST("/sync/push")
+    @POST("sync/push")
     suspend fun push(@Body payload: PushPayload): PushResponse
 }
 
@@ -26,7 +26,7 @@ data class TaskSync(
     val progressPercentage: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val priority: String? = null,
-    val dueDate: Long? = null,
+    val dueDate: String? = null,
     val updated_at: String,
     val is_deleted: Boolean = false
 )
