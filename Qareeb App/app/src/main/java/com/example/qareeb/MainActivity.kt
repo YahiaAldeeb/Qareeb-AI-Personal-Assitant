@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,7 +56,7 @@ class MainActivity : ComponentActivity() {
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
 
-        val userId = sessionManager.getUserId()
+        /*val userId = sessionManager.getUserId()
         if (!userId.isNullOrEmpty()) {
             lifecycleScope.launch {
                 val syncRepo = SyncRepository(
@@ -63,8 +64,31 @@ class MainActivity : ComponentActivity() {
                     api = RetrofitInstance.api,
                     prefs = getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
                 )
-                syncRepo.sync(userId)
+                Log.d("SYNC", "MainActivity calling sync, userId=$userId")
+
+                syncRepo.sync("ccabd069-bb4f-465f-9bdd-8f711b85cb18")
             }
+        }*/
+
+        lifecycleScope.launch {
+            val testUserId = "ccabd069-bb4f-465f-9bdd-8f711b85cb18"
+
+            // Save session so ViewModel uses the same userId
+            sessionManager.saveUserSession(
+                userId = testUserId,
+                username = "Farida",
+                email = "farida"
+            )
+
+            val syncRepo = SyncRepository(
+                taskDao = db.taskDao(),
+                userDao = db.userDao(),
+                api = RetrofitInstance.api,
+                prefs = getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
+            )
+
+            Log.d("SYNC", "MainActivity calling sync, userId=$testUserId")
+            syncRepo.sync(testUserId)
         }
 
         setContent {

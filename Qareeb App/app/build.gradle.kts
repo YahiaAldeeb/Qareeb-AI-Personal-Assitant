@@ -47,7 +47,8 @@ android {
 }
 
 dependencies {
-
+    // build.gradle
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     /* ---------------- Core Android ---------------- */
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
