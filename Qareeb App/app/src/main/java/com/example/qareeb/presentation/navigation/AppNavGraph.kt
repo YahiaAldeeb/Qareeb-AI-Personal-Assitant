@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
+import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
 import com.example.qareeb.domain.usecase.task.AddTaskUseCase
 import com.example.qareeb.domain.usecase.task.DeleteTaskUseCase
 import com.example.qareeb.domain.usecase.task.GetTasksByUserUseCase
@@ -20,12 +21,15 @@ import com.example.qareeb.presentation.screens.ChatBotScreen
 import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.screens.DashboardScreen
 import com.example.qareeb.presentation.screens.FinanceScreen
+import com.example.qareeb.presentation.screens.LoginScreen
 import com.example.qareeb.presentation.screens.TasksScreen
 import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.presentation.viewModels.DashboardViewModel
 import com.example.qareeb.presentation.viewModels.DashboardViewModelFactory
 import com.example.qareeb.presentation.viewModels.FinanceViewModel
 import com.example.qareeb.presentation.viewModels.FinanceViewModelFactory
+import com.example.qareeb.presentation.viewModels.LoginViewModel
+import com.example.qareeb.presentation.viewModels.LoginViewModelFactory
 import com.example.qareeb.presentation.viewModels.TaskViewModel
 import com.example.qareeb.presentation.viewModels.TaskViewModelFactory
 import com.example.qareeb.presentation.viewModels.UserViewModel
@@ -37,6 +41,8 @@ object Routes {
     const val TASKS = "task_tracker"
     const val CHATBOT = "chatbot"
     const val FINANCE = "finance"
+    const val LOGIN = "login"
+    const val REGISTER = "register"
 }
 
 @Composable
@@ -45,8 +51,16 @@ fun AppNavGraph(
     sessionManager: SessionManager,
     taskRepo: TaskRepositoryImpl,
     financeRepo: TransactionRepositoryImpl,
+    userRepo: UserRepositoryImpl,
     modifier: Modifier = Modifier
 ) {
+
+    val startDestination = if (sessionManager.isLoggedIn()) {
+        Routes.SPLASH      // ← already logged in, go to splash then dashboard
+    } else {
+        Routes.LOGIN       // ← never logged in, show login first
+    }
+
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(sessionManager)
     )
@@ -65,7 +79,7 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = Routes.SPLASH,
+        startDestination = startDestination,
         modifier = modifier
     ) {
 
@@ -125,6 +139,25 @@ fun AppNavGraph(
                 )
             )
             FinanceScreen(viewModel = vm)
+        }
+
+        composable(Routes.LOGIN) {
+            val vm: LoginViewModel = viewModel(
+                factory = LoginViewModelFactory(
+                    userRepository = userRepo,
+                    sessionManager = sessionManager  // ← already available in AppNavGraph
+                )
+            )
+            LoginScreen(
+                viewModel = vm,
+                onLoginSuccess = {
+                    navController.navigate(Routes.DASHBOARD) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                },
+                onForgotPasswordClick = { },
+                onRegisterClick = { navController.navigate(Routes.REGISTER) }
+            )
         }
 
         // ── ChatBot ──

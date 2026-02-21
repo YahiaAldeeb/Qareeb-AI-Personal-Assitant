@@ -31,6 +31,7 @@ import com.example.qareeb.data.remote.RetrofitInstance
 import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
+import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
 import com.example.qareeb.presentation.MainScaffold
 import com.example.qareeb.presentation.utilis.SessionManager
 import kotlinx.coroutines.launch
@@ -38,12 +39,12 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     // Permission Launchers (Standard Android way, wrapped for Activity)
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = permissions.entries.all { it.value }
-        if (granted) startService()
-    }
+//    private val requestPermissionLauncher = registerForActivityResult(
+//        ActivityResultContracts.RequestMultiplePermissions()
+//    ) { permissions ->
+//        val granted = permissions.entries.all { it.value }
+//        if (granted) startService()
+//    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -54,6 +55,10 @@ class MainActivity : ComponentActivity() {
         val sessionManager = SessionManager.getInstance(this)
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
+        val userRepo = UserRepositoryImpl(db.userDao())
+
+//        checkPermissionsAndStart()
+
 
         val userId = sessionManager.getUserId()
         if (!userId.isNullOrEmpty()) {
@@ -69,106 +74,119 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // This is your Compose UI Entry Point
-            MainScaffold(sessionManager = sessionManager,
+            MainScaffold(
+                sessionManager = sessionManager,
                 taskRepo = taskRepo,
-                financeRepo = financeRepo)
+                financeRepo = financeRepo,
+                userRepo = userRepo
+            )
 
 //            FancyGradientBackground {
 //                MyFinanceScreen("Farida")
 //            }
         }
     }
-    private fun checkPermissionsAndStart() {
-        // 1. Check Overlay Permission (Special)
-        if (!Settings.canDrawOverlays(this)) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-            startActivity(intent)
-            return
-        }
+//    private fun checkPermissionsAndStart() {
+//        // 1. Check Overlay Permission (Special)
+//        if (!Settings.canDrawOverlays(this)) {
+//            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+//            startActivity(intent)
+//            return
+//        }
+//
+//        // 2. Check Mic & Notification Permissions
+//        val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)
+//        if (Build.VERSION.SDK_INT >= 33) {
+//            perms.add(Manifest.permission.POST_NOTIFICATIONS)
+//        }
+//
+//        requestPermissionLauncher.launch(perms.toTypedArray())
+//    }
+//
+//    private fun startService() {
+//        val intent = Intent(this, QareebListeningService::class.java)
+//        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+//        // Minimize App
+//        moveTaskToBack(true)
+//    }
+//}
 
-        // 2. Check Mic & Notification Permissions
-        val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)
-        if (Build.VERSION.SDK_INT >= 33) {
-            perms.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
+    // --- THIS IS YOUR NEW UI (Written in Kotlin, not XML) ---
+    @Composable
+    fun QareebHomeScreen(onStartClick: () -> Unit) {
+        val context = LocalContext.current
 
-        requestPermissionLauncher.launch(perms.toTypedArray())
-    }
-
-    private fun startService() {
-        val intent = Intent(this, QareebListeningService::class.java)
-        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
-        // Minimize App
-        moveTaskToBack(true)
-    }
-}
-
-// --- THIS IS YOUR NEW UI (Written in Kotlin, not XML) ---
-@Composable
-fun QareebHomeScreen(onStartClick: () -> Unit) {
-    val context = LocalContext.current
-
-    // Background Gradient
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF1E1E1E), Color(0xFF000000))
-                )
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(24.dp)
-        ) {
-            // Header
-            Text(
-                text = "Qareeb AI",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Your Agentic Assistant",
-                color = Color.Gray,
-                fontSize = 16.sp
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // The Big Power Button
-            Button(
-                onClick = onStartClick,
-                modifier = Modifier.size(120.dp),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00E5FF)
+        // Background Gradient
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF1E1E1E), Color(0xFF000000))
+                    )
                 ),
-                elevation = ButtonDefaults.buttonElevation(10.dp)
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(24.dp)
             ) {
-                Text(text = "ON", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-            }
+                // Header
+                Text(
+                    text = "Qareeb AI",
+                    color = Color.White,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // Status Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Setup Guide:", color = Color.White, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("1. Click button to grant permissions.", color = Color.LightGray, fontSize = 12.sp)
-                    Text("2. App will minimize.", color = Color.LightGray, fontSize = 12.sp)
-                    Text("3. Say 'Hi Q' anytime.", color = Color.LightGray, fontSize = 12.sp)
+                Text(
+                    text = "Your Agentic Assistant",
+                    color = Color.Gray,
+                    fontSize = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(48.dp))
+
+                // The Big Power Button
+                Button(
+                    onClick = onStartClick,
+                    modifier = Modifier.size(120.dp),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF00E5FF)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(10.dp)
+                ) {
+                    Text(
+                        text = "ON",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Status Card
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Setup Guide:", color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "1. Click button to grant permissions.",
+                            color = Color.LightGray,
+                            fontSize = 12.sp
+                        )
+                        Text("2. App will minimize.", color = Color.LightGray, fontSize = 12.sp)
+                        Text("3. Say 'Hi Q' anytime.", color = Color.LightGray, fontSize = 12.sp)
+                    }
                 }
             }
         }

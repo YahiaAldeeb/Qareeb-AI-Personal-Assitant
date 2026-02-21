@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
+import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
 import com.example.qareeb.presentation.navigation.AppNavGraph
 import com.example.qareeb.presentation.ui.components.BottomNavBar
 import com.example.qareeb.presentation.utilis.SessionManager
@@ -15,7 +16,8 @@ import com.example.qareeb.presentation.utilis.SessionManager
 fun MainScaffold(
     sessionManager: SessionManager,
     taskRepo: TaskRepositoryImpl,
-    financeRepo: TransactionRepositoryImpl
+    financeRepo: TransactionRepositoryImpl,
+    userRepo: UserRepositoryImpl
 ) {
     val navController = rememberNavController()
 
@@ -29,6 +31,7 @@ fun MainScaffold(
             sessionManager = sessionManager,
             taskRepo = taskRepo,
             financeRepo = financeRepo,
+            userRepo = userRepo,
             modifier = Modifier.padding(paddingValues)
         )
     }
