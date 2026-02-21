@@ -6,9 +6,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.qareeb.data.remote.RetrofitInstance
+import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
-import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
+import com.example.qareeb.domain.repository.UserRepository
 import com.example.qareeb.domain.usecase.task.AddTaskUseCase
 import com.example.qareeb.domain.usecase.task.DeleteTaskUseCase
 import com.example.qareeb.domain.usecase.task.GetTasksByUserUseCase
@@ -37,12 +39,11 @@ import com.example.qareeb.presentation.viewModels.UserViewModelFactory
 
 object Routes {
     const val SPLASH = "splash"
+    const val LOGIN = "login"
     const val DASHBOARD = "dashboard"
     const val TASKS = "task_tracker"
     const val CHATBOT = "chatbot"
     const val FINANCE = "finance"
-    const val LOGIN = "login"
-    const val REGISTER = "register"
 }
 
 @Composable
@@ -51,21 +52,15 @@ fun AppNavGraph(
     sessionManager: SessionManager,
     taskRepo: TaskRepositoryImpl,
     financeRepo: TransactionRepositoryImpl,
-    userRepo: UserRepositoryImpl,
+    syncRepository: SyncRepository,
+    userRepository: UserRepository,
     modifier: Modifier = Modifier
 ) {
-
-    val startDestination = if (sessionManager.isLoggedIn()) {
-        Routes.SPLASH      // ← already logged in, go to splash then dashboard
-    } else {
-        Routes.LOGIN       // ← never logged in, show login first
-    }
-
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(sessionManager)
     )
     val userId = userViewModel.userId ?: ""
-    val username = userViewModel.username ?: "Guest"
+    val username = userViewModel.username
 
     val getTasksByUser = GetTasksByUserUseCase(taskRepo)
     val addTask = AddTaskUseCase(taskRepo)
@@ -79,7 +74,7 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = startDestination,
+        startDestination = Routes.SPLASH,
         modifier = modifier
     ) {
 
@@ -87,10 +82,32 @@ fun AppNavGraph(
         composable(Routes.SPLASH) {
             SplashScreen(
                 onSplashFinished = {
-                    navController.navigate(Routes.DASHBOARD) {
+                    val destination = if (sessionManager.isLoggedIn()) Routes.DASHBOARD else Routes.LOGIN
+                    navController.navigate(destination) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // ── Login ──
+        composable(Routes.LOGIN) {
+            val vm: LoginViewModel = viewModel(
+                factory = LoginViewModelFactory(
+                    userRepository = userRepository,  // ✅ fixed: lowercase = the parameter instance
+                    sessionManager = sessionManager,
+                    syncRepository = syncRepository
+                )
+            )
+            LoginScreen(
+                viewModel = vm,
+                onLoginSuccess = {
+                    navController.navigate(Routes.DASHBOARD) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                },
+                onForgotPasswordClick = {},
+                onRegisterClick = {}
             )
         }
 
@@ -139,25 +156,6 @@ fun AppNavGraph(
                 )
             )
             FinanceScreen(viewModel = vm)
-        }
-
-        composable(Routes.LOGIN) {
-            val vm: LoginViewModel = viewModel(
-                factory = LoginViewModelFactory(
-                    userRepository = userRepo,
-                    sessionManager = sessionManager  // ← already available in AppNavGraph
-                )
-            )
-            LoginScreen(
-                viewModel = vm,
-                onLoginSuccess = {
-                    navController.navigate(Routes.DASHBOARD) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                },
-                onForgotPasswordClick = { },
-                onRegisterClick = { navController.navigate(Routes.REGISTER) }
-            )
         }
 
         // ── ChatBot ──

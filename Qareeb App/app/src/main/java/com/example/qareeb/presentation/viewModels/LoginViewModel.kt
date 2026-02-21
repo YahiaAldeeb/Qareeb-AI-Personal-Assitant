@@ -3,12 +3,11 @@ package com.example.qareeb.presentation.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.qareeb.data.remote.LoginRequest
+import com.example.qareeb.data.remote.RetrofitInstance
+import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.domain.model.UserDomain
 import com.example.qareeb.domain.repository.UserRepository
-import com.example.qareeb.domain.usecase.task.AddTaskUseCase
-import com.example.qareeb.domain.usecase.task.DeleteTaskUseCase
-import com.example.qareeb.domain.usecase.task.GetTasksByUserUseCase
-import com.example.qareeb.domain.usecase.task.UpdateTaskUseCase
 import com.example.qareeb.presentation.utilis.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +15,8 @@ import kotlinx.coroutines.launch
 
 class LoginViewModel(
     private val userRepository: UserRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val syncRepository: SyncRepository
 ) : ViewModel() {
 
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
@@ -31,15 +31,29 @@ class LoginViewModel(
                 return@launch
             }
 
-            val user = userRepository.getUserByEmailAndPassword(email, password)
-            if (user != null) {
-                sessionManager.saveUserSession(
-                    userId = user.userId,
-                    username = user.name,
-                    email = user.email
+            try {
+                val response = RetrofitInstance.api.login(
+                    LoginRequest(email = email, password = password)
                 )
-                _loginState.value = LoginState.Success(user)
-            } else {
+
+                sessionManager.saveUserSession(
+                    userId = response.userID,
+                    username = response.name,
+                    email = response.email
+                )
+
+                // Sync right after login
+                syncRepository.sync(response.userID)
+
+                _loginState.value = LoginState.Success(
+                    UserDomain(
+                        userId = response.userID,
+                        name = response.name,
+                        email = response.email,
+                        password = ""
+                    )
+                )
+            } catch (e: Exception) {
                 _loginState.value = LoginState.Error("Invalid email or password")
             }
         }
@@ -48,12 +62,11 @@ class LoginViewModel(
 
 class LoginViewModelFactory(
     private val userRepository: UserRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val syncRepository: SyncRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return LoginViewModel(
-            userRepository, sessionManager
-        ) as T
+        return LoginViewModel(userRepository, sessionManager, syncRepository) as T
     }
 }
 

@@ -56,7 +56,8 @@ class MainActivity : ComponentActivity() {
         val sessionManager = SessionManager.getInstance(this)
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
-        val userRepo = UserRepositoryImpl(db.userDao())
+        //val userRepo = UserRepositoryImpl(db.userDao())
+        val userRepo = com.example.qareeb.data.repositoryImp.UserRepositoryImpl(db.userDao())
 
 //        checkPermissionsAndStart()
 
@@ -75,7 +76,7 @@ class MainActivity : ComponentActivity() {
             }
         }*/
 
-        lifecycleScope.launch {
+       /* lifecycleScope.launch {
             val testUserId = "ccabd069-bb4f-465f-9bdd-8f711b85cb18"
 
             // Save session so ViewModel uses the same userId
@@ -94,20 +95,39 @@ class MainActivity : ComponentActivity() {
 
             Log.d("SYNC", "MainActivity calling sync, userId=$testUserId")
             syncRepo.sync(testUserId)
+        }*/
+
+
+
+
+
+
+        val syncRepository = SyncRepository(
+            taskDao = db.taskDao(),
+            userDao = db.userDao(),
+            api = RetrofitInstance.syncApi,  // Changed from .api to .syncApi
+            prefs = getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
+        )
+
+// Sync on app start if already logged in
+        lifecycleScope.launch {
+            val userId = sessionManager.getUserId()
+            if (!userId.isNullOrEmpty()) {
+                Log.d("SYNC", "Already logged in, syncing userId=$userId")
+                syncRepository.sync(userId)
+            } else {
+                Log.d("SYNC", "No user logged in, skipping sync")
+            }
         }
 
         setContent {
-            // This is your Compose UI Entry Point
             MainScaffold(
                 sessionManager = sessionManager,
                 taskRepo = taskRepo,
                 financeRepo = financeRepo,
-                userRepo = userRepo
+                syncRepository = syncRepository,
+                userRepository = userRepo
             )
-
-//            FancyGradientBackground {
-//                MyFinanceScreen("Farida")
-//            }
         }
     }
 //    private fun checkPermissionsAndStart() {
