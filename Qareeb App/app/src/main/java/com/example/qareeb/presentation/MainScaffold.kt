@@ -15,7 +15,8 @@ import com.example.qareeb.presentation.utilis.SessionManager
 fun MainScaffold(
     sessionManager: SessionManager,
     taskRepo: TaskRepositoryImpl,
-    financeRepo: TransactionRepositoryImpl
+    financeRepo: TransactionRepositoryImpl,
+    onStartQareeb: () -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -29,7 +30,8 @@ fun MainScaffold(
             sessionManager = sessionManager,
             taskRepo = taskRepo,
             financeRepo = financeRepo,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
+            onStartQareeb = onStartQareeb
         )
     }
 }

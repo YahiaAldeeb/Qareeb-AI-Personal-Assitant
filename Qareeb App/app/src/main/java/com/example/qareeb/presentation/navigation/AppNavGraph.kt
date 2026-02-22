@@ -45,7 +45,8 @@ fun AppNavGraph(
     sessionManager: SessionManager,
     taskRepo: TaskRepositoryImpl,
     financeRepo: TransactionRepositoryImpl,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartQareeb: () -> Unit
 ) {
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(sessionManager)
@@ -129,7 +130,10 @@ fun AppNavGraph(
 
         // ── ChatBot ──
         composable(Routes.CHATBOT) {
-            ChatBotScreen()
+            ChatBotScreen(
+                username = username,
+                onStartQareeb = onStartQareeb
+            )
         }
     }
 }
