@@ -109,16 +109,17 @@ class MainActivity : ComponentActivity() {
         )
 
 // Sync on app start if already logged in
-         lifecycleScope.launch {
+        lifecycleScope.launch {
             val userId = sessionManager.getUserId()
             if (!userId.isNullOrEmpty()) {
-                Log.d("SYNC", "Already logged in, syncing userId=$userId")
-                syncRepository.sync(userId)
-
-                val tasks = db.taskDao().getTasksByUserOneShot(userId)  // Remove .first()
-                Log.d("UI_DEBUG", "📱 Tasks in database for UI: ${tasks.size}")
-                tasks.forEach { task ->
-                    Log.d("UI_DEBUG", "  - ${task.title} (deleted: ${task.isDeleted})")
+                val localTasks = db.taskDao().getTasksByUserOneShot(userId)
+                if (localTasks.isEmpty()) {
+                    // No local tasks → sync to get them from server
+                    Log.d("SYNC", "No local tasks, syncing...")
+                    syncRepository.sync(userId)
+                } else {
+                    // Tasks already in DB → no need to sync
+                    Log.d("SYNC", "Already have ${localTasks.size} tasks in DB, skipping sync")
                 }
             } else {
                 Log.d("SYNC", "No user logged in, skipping sync")
@@ -136,6 +137,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+
 //    private fun checkPermissionsAndStart() {
 //        // 1. Check Overlay Permission (Special)
 //        if (!Settings.canDrawOverlays(this)) {
