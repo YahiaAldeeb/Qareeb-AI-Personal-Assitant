@@ -9,8 +9,8 @@ interface UserDao {
     @Query("SELECT * FROM user WHERE user_id = :userId")
     fun getUserById(userId: String): Flow<User?>
 
-    @Query("SELECT * FROM user WHERE email = :email")
-    suspend fun getUserByEmail(email: String): User?
+    @Query("SELECT * FROM user WHERE email = :email AND password = :password LIMIT 1")
+    suspend fun getUserByEmail(email: String, password: String): User?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: User): Long

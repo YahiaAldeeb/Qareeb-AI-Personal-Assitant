@@ -1,68 +1,190 @@
 package com.example.qareeb.data.remote
 
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.qareeb.data.dao.TaskDao
+import com.example.qareeb.data.dao.UserDao
 import com.example.qareeb.data.entity.Task
-import com.example.qareeb.data.dao.TaskDao_Impl
+import com.example.qareeb.data.entity.User
 
 class SyncRepository(
     private val taskDao: TaskDao,
+    private val userDao: UserDao,
     private val api: SyncApi,
-    private val prefs: SharedPreferences  // to store last sync time
+    private val prefs: SharedPreferences
 ) {
     companion object {
         private const val LAST_SYNC_KEY = "last_sync_time"
+        private const val TAG = "SYNC"
     }
 
     suspend fun sync(userId: String) {
         try {
-            push(userId)   // push local changes first
-            pull(userId)   // then pull server changes
+            Log.d(TAG, "========== SYNC START ==========")
+            Log.d(TAG, "User ID: $userId")
+            push(userId)
+            pull(userId)
+            Log.d(TAG, "========== SYNC COMPLETE ==========")
         } catch (e: Exception) {
-            e.printStackTrace() // handle no internet gracefully
+            Log.e(TAG, "========== SYNC FAILED ==========")
+            Log.e(TAG, "Error: ${e.message}")
+            e.printStackTrace()
         }
     }
 
-    // ── Push local changes to server ──
     private suspend fun push(userId: String) {
-        val localTasks = taskDao.getTasksByUserOneShot(userId)  // one-shot, not Flow
+        Log.d(TAG, "--- PUSH START ---")
+
+        val unsynced = taskDao.getUnsyncedTasks()
+        if (unsynced.isEmpty()) {
+            Log.d(TAG, "Nothing to push")
+            Log.d(TAG, "--- PUSH COMPLETE ---")
+            return
+        }
+
+        Log.d(TAG, "Pushing ${unsynced.size} records to server")
+
         val payload = PushPayload(
-            records = localTasks.map { task ->
+            records = unsynced.map { task ->
                 TaskSync(
                     taskID = task.taskId,
                     userID = task.userId,
                     title = task.title,
                     description = task.description,
                     updated_at = task.updatedAt,
-                    is_deleted = task.isDeleted
+                    is_deleted = task.isDeleted,
+                    dueDate = task.dueDate?.let {
+                        java.time.Instant.ofEpochMilli(it)
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toOffsetDateTime()
+                            .toString()
+                    }
                 )
             }
         )
-        api.push(payload)
+
+        try {
+            api.push(payload)
+            taskDao.markSynced(unsynced.map { it.taskId })
+            Log.d(TAG, "Successfully pushed ${unsynced.size} tasks")
+        } catch (e: Exception) {
+            Log.e(TAG, "Push failed: ${e.message}")
+            throw e
+        }
+
+        Log.d(TAG, "--- PUSH COMPLETE ---")
     }
 
-    // ── Pull server changes into Room ──
     private suspend fun pull(userId: String) {
-        val lastSync = prefs.getString(LAST_SYNC_KEY, "2000-01-01T00:00:00") ?: "2000-01-01T00:00:00"
-        val response = api.pull(userId, lastSync)
+        Log.d(TAG, "--- PULL START ---")
+
+        // ← KEY FIX: if DB is empty, always force a full sync
+        val localTaskCount = taskDao.getTasksByUserOneShot(userId).size
+        Log.d(TAG, "Local task count: $localTaskCount")
+
+        val lastSync = if (localTaskCount == 0) {
+            Log.d(TAG, "DB is empty → forcing full sync from beginning")
+            "2000-01-01T00:00:00"
+        } else {
+            prefs.getString(LAST_SYNC_KEY, "2000-01-01T00:00:00")
+                ?: "2000-01-01T00:00:00"
+        }
+
+        Log.d(TAG, "Last sync: $lastSync")
+
+        val response = try {
+            api.pull(userId, lastSync)
+        } catch (e: Exception) {
+            Log.e(TAG, "Pull API call failed: ${e.message}")
+            throw e
+        }
+
+        Log.d(TAG, "Received ${response.records.size} tasks from server")
+
+        // Ensure user exists in local Room before inserting tasks
+        try {
+            userDao.insertUser(
+                User(
+                    userId = userId,
+                    name = "User",
+                    email = "",
+                    password = ""
+                )
+            )
+        } catch (e: Exception) {
+            Log.d(TAG, "User already exists (OK)")
+        }
+
+        val tasksBeforeSync = taskDao.getTasksByUserOneShot(userId).size
+        Log.d(TAG, "Tasks in DB BEFORE sync: $tasksBeforeSync")
+
+        var deletedCount = 0
+        var upsertedCount = 0
+        var errorCount = 0
 
         response.records.forEach { remote ->
-            if (remote.is_deleted) {
-                taskDao.deleteTaskById(remote.taskID)
-            } else {
-                taskDao.upsertTask(
-                    Task(
+            try {
+                Log.d(TAG, "Processing: ${remote.title}, is_deleted=${remote.is_deleted}")
+
+                if (remote.is_deleted) {
+                    taskDao.deleteTaskById(remote.taskID)
+                    deletedCount++
+                    Log.d(TAG, "  ✓ DELETED: ${remote.title}")
+                } else {
+                    val dueDateMillis = remote.dueDate?.let { dueDateStr ->
+                        try {
+                            java.time.OffsetDateTime.parse(dueDateStr)
+                                .toInstant()
+                                .toEpochMilli()
+                        } catch (e: Exception) {
+                            try {
+                                java.time.LocalDateTime.parse(dueDateStr)
+                                    .atZone(java.time.ZoneId.systemDefault())
+                                    .toInstant()
+                                    .toEpochMilli()
+                            } catch (e2: Exception) {
+                                Log.w(TAG, "  Could not parse dueDate: $dueDateStr")
+                                null
+                            }
+                        }
+                    }
+
+                    val task = Task(
                         taskId = remote.taskID,
-                        userId = remote.userID,
+                        userId = userId,
                         title = remote.title,
                         description = remote.description,
-                        updatedAt = remote.updated_at
+                        updatedAt = remote.updated_at,
+                        dueDate = dueDateMillis,
+                        isDeleted = false,
+                        is_synced = true
                     )
-                )
+
+                    Log.d(TAG, "  Upserting: taskId=${task.taskId}, userId=${task.userId}, title=${task.title}")
+                    taskDao.upsertTask(task)
+                    upsertedCount++
+                    Log.d(TAG, "  ✓ UPSERTED: ${remote.title}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "  ✗ Failed to process: ${remote.title}")
+                Log.e(TAG, "    Error: ${e.message}")
+                e.printStackTrace()
+                errorCount++
             }
         }
 
-        // save last sync time
-        prefs.edit().putString(LAST_SYNC_KEY, response.server_time).apply()
+        val tasksAfterSync = taskDao.getTasksByUserOneShot(userId).size
+        Log.d(TAG, "Tasks in DB AFTER sync: $tasksAfterSync")
+        Log.d(TAG, "Results: $upsertedCount upserted, $deletedCount deleted, $errorCount errors")
+
+        // Only update last_sync if we actually received and saved tasks
+        if (upsertedCount > 0 || deletedCount > 0) {
+            prefs.edit().putString(LAST_SYNC_KEY, response.server_time).apply()
+            Log.d(TAG, "Updated last_sync to: ${response.server_time}")
+        } else {
+            Log.d(TAG, "No changes — last_sync NOT updated")
+        }
+
+        Log.d(TAG, "--- PULL COMPLETE ---")
     }
 }
