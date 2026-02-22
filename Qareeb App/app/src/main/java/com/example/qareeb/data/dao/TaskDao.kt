@@ -33,4 +33,10 @@ interface TaskDao {
     // delete by id for soft deletes
     @Query("DELETE FROM task WHERE task_id = :taskId")
     suspend fun deleteTaskById(taskId: String)
+
+    @Query("SELECT * FROM task WHERE is_synced = 0")
+    suspend fun getUnsyncedTasks(): List<Task>
+
+    @Query("UPDATE task SET is_synced = 1 WHERE task_id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

@@ -62,6 +62,12 @@ fun FullBackground(content: @Composable () -> Unit) {
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillBounds
         )
+        Image(
+            painter = painterResource(id = R.drawable.stars),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds  // ← stretches to fill entire screen
+        )
 
         // 3. Content on top
         content()

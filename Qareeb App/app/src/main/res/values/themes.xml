@@ -5,12 +5,13 @@
         <!-- your theme items here -->
     </style>
 
-    <!-- Main app theme ← this was missing -->
+    <!-- Main app theme -->
     <style name="Theme.Qareeb" parent="Base.Theme.Qareeb" />
 
     <!-- Splash theme -->
     <style name="Theme.Qareeb.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#6B46C1</item>
+<!--        <item name="windowSplashScreenAnimatedIcon">@drawable/qareeb</item>-->
         <item name="postSplashScreenTheme">@style/Theme.Qareeb</item>
     </style>
 

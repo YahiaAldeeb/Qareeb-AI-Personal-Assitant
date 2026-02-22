@@ -2,34 +2,34 @@ package com.example.qareeb.presentation.utilis
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 class SessionManager private constructor(context: Context) {
 
-    private var prefs: SharedPreferences
+    private val prefs: SharedPreferences
 
     init {
         val appContext = context.applicationContext
-        try {
-            val masterKey = MasterKey.Builder(appContext)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
 
-            prefs = EncryptedSharedPreferences.create(
-                context,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        // One-time migration: delete old corrupted encrypted prefs if they exist
+        try {
+            val encryptedFile = java.io.File(
+                appContext.filesDir.parent,
+                "shared_prefs/qareeb_secure_prefs.xml"
             )
+            if (encryptedFile.exists()) {
+                encryptedFile.delete()
+                android.util.Log.d("SESSION", "Deleted old encrypted prefs file")
+            }
         } catch (e: Exception) {
-            prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            android.util.Log.e("SESSION", "Could not delete old prefs: ${e.message}")
         }
+
+        prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        android.util.Log.d("SESSION", "SessionManager initialized with prefs: $PREFS_NAME")
     }
 
     companion object {
-        private const val PREFS_NAME = "qareeb_secure_prefs"
+        private const val PREFS_NAME = "qareeb_session_prefs" // ← new name, fresh start
         private const val USER_ID = "user_id"
         private const val USER_NAME = "user_name"
         private const val USER_EMAIL = "user_email"
@@ -53,10 +53,12 @@ class SessionManager private constructor(context: Context) {
             email?.let { putString(USER_EMAIL, it) }
             apply()
         }
+        android.util.Log.d("SESSION", "Saved session → userId=$userId, username=$username")
     }
 
-    fun saveUserId(userId: String) {                          // ← String not Long
-        prefs.edit().putString(USER_ID, userId).apply()       // ← putString not putLong
+    fun saveUserId(userId: String) {
+        prefs.edit().putString(USER_ID, userId).apply()
+        android.util.Log.d("SESSION", "Saved userId: $userId")
     }
 
     fun saveUsername(username: String) {
@@ -68,7 +70,9 @@ class SessionManager private constructor(context: Context) {
     }
 
     fun getUserId(): String? {
-        return prefs.getString(USER_ID, null)                 // ← null not -1L
+        val id = prefs.getString(USER_ID, null)
+        android.util.Log.d("SESSION", "getUserId → $id")
+        return id
     }
 
     fun getUsername(): String? {
@@ -80,10 +84,11 @@ class SessionManager private constructor(context: Context) {
     }
 
     fun isLoggedIn(): Boolean {
-        return !getUserId().isNullOrEmpty() && !getUsername().isNullOrEmpty() // ← String null check
+        return !getUserId().isNullOrEmpty() && !getUsername().isNullOrEmpty()
     }
 
     fun clearSession() {
         prefs.edit().clear().apply()
+        android.util.Log.d("SESSION", "Session cleared")
     }
 }

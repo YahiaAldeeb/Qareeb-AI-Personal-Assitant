@@ -21,7 +21,9 @@ class UserRepositoryImpl(private val userDao: UserDao) : UserRepository {
     override suspend fun updateUser(user: UserDomain) {
         userDao.updateUser(user.toEntity())
     }
-
+    override suspend fun getUserByEmailAndPassword(email: String, password: String): UserDomain? {
+        return userDao.getUserByEmail(email, password)?.toDomain()
+    }
     override suspend fun deleteUser(user: UserDomain) {
         userDao.deleteUser(user.toEntity())
     }

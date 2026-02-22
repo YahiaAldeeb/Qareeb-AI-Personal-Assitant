@@ -40,5 +40,8 @@ data class Task(
     @ColumnInfo(name = "updated_at")
     val updatedAt: String = System.currentTimeMillis().toString(),
     @ColumnInfo(name = "is_deleted")
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+
+    @ColumnInfo(name = "is_synced")
+    val is_synced: Boolean = false  // local only, never sent to server
 )
