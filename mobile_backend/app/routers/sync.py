@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 from app.database import get_db
 
@@ -20,8 +20,23 @@ class TaskSync(BaseModel):
     dueDate: Optional[str] = None
 
 
+class TransactionSync(BaseModel):
+    transactionID: str
+    userID: str
+    title: str
+    amount: float
+    date: str
+    state: Optional[str] = None
+    is_deleted: bool = False
+    updated_at: str
+
+
 class PushPayload(BaseModel):
     records: List[TaskSync]
+
+
+class TransactionPushPayload(BaseModel):
+    records: List[TransactionSync]
 
 
 class PullResponse(BaseModel):
@@ -30,7 +45,6 @@ class PullResponse(BaseModel):
 
 
 def serialize_row(row):
-    """Convert database row to JSON-serializable dict"""
     result = {}
     for k, v in row.items():
         if isinstance(v, datetime):
@@ -42,87 +56,66 @@ def serialize_row(row):
     return result
 
 
+# ── Task Pull ──
 @router.get("/sync/pull", response_model=PullResponse)
 def pull_changes(user_id: str, last_sync: str, db: Session = Depends(get_db)):
-    """
-    Pull all tasks for a user that have been updated since last_sync
-    """
     print(f"[SYNC PULL] user_id: {user_id}")
     print(f"[SYNC PULL] last_sync: {last_sync}")
-    
-    # Parse the last_sync parameter
+
     try:
         cutoff_time = datetime.fromisoformat(last_sync.replace("Z", "+00:00"))
-        # Remove timezone info to match DB format (if your DB stores naive datetimes)
         if cutoff_time.tzinfo:
             cutoff_time = cutoff_time.replace(tzinfo=None)
     except Exception as e:
         print(f"[SYNC PULL] Error parsing last_sync: {e}")
-        # Fallback to very old date if parsing fails
         cutoff_time = datetime(2000, 1, 1)
-    
+
     print(f"[SYNC PULL] cutoff_time: {cutoff_time}")
-    
-    # Query tasks for this user updated after cutoff_time
+
     rows = db.execute(
         text('''
-            SELECT * FROM "Task" 
-            WHERE "userID" = :user_id 
-            AND updated_at >= :cutoff 
+            SELECT * FROM "Task"
+            WHERE "userID" = :user_id
+            AND updated_at >= :cutoff
             ORDER BY updated_at DESC
         '''),
         {"user_id": user_id, "cutoff": cutoff_time}
     ).mappings().all()
-    
+
     print(f"[SYNC PULL] Found {len(rows)} tasks")
-    if rows:
-        print(f"[SYNC PULL] Sample task: {dict(rows[0])}")
-    
-    # Serialize rows (convert UUID and datetime to strings)
     serialized = [serialize_row(r) for r in rows]
-    
-    if serialized:
-        print(f"[SYNC PULL] Sample serialized: {serialized[0]}")
-    
+
     return {
         "records": serialized,
         "server_time": datetime.utcnow().isoformat()
     }
 
 
+# ── Task Push ──
 @router.post("/sync/push")
 def push_changes(payload: PushPayload, db: Session = Depends(get_db)):
-    """
-    Push task changes from client to server
-    Uses last-write-wins conflict resolution
-    """
     print(f"[SYNC PUSH] Received {len(payload.records)} records")
-    
+
     for item in payload.records:
-        # Check if task already exists
         existing = db.execute(
             text('SELECT "taskID", updated_at FROM "Task" WHERE "taskID" = :taskID'),
             {"taskID": item.taskID}
         ).mappings().first()
 
+        due_date = None
+        if item.dueDate:
+            try:
+                due_date = datetime.fromisoformat(item.dueDate.replace("Z", "+00:00"))
+                if due_date.tzinfo:
+                    due_date = due_date.replace(tzinfo=None)
+            except Exception as e:
+                print(f"[SYNC PUSH] Error parsing dueDate: {e}")
+
         if existing is None:
-            # New task - insert it
-            print(f"[SYNC PUSH] Inserting new task: {item.title}")
-            
-            # Parse dueDate if provided
-            due_date = None
-            if item.dueDate:
-                try:
-                    due_date = datetime.fromisoformat(item.dueDate.replace("Z", "+00:00"))
-                    if due_date.tzinfo:
-                        due_date = due_date.replace(tzinfo=None)
-                except Exception as e:
-                    print(f"[SYNC PUSH] Error parsing dueDate: {e}")
-            
             db.execute(
                 text('''
-                    INSERT INTO "Task" 
-                    ("taskID", "userID", title, description, is_deleted, "dueDate") 
+                    INSERT INTO "Task"
+                    ("taskID", "userID", title, description, is_deleted, "dueDate")
                     VALUES (:taskID, :userID, :title, :description, :is_deleted, :dueDate)
                 '''),
                 {
@@ -135,41 +128,22 @@ def push_changes(payload: PushPayload, db: Session = Depends(get_db)):
                 }
             )
         else:
-            # Task exists - check if client version is newer
             server_time = existing["updated_at"]
-            
-            # Parse client timestamp
             try:
                 client_time = datetime.fromisoformat(item.updated_at.replace("Z", "+00:00"))
                 if client_time.tzinfo and server_time and server_time.tzinfo is None:
                     client_time = client_time.replace(tzinfo=None)
-            except Exception as e:
-                print(f"[SYNC PUSH] Error parsing client time: {e}")
+            except:
                 client_time = None
-            
-            # Update if server_time is None OR client is newer
-            should_update = (server_time is None) or (client_time and client_time > server_time)
-            
-            if should_update:
-                print(f"[SYNC PUSH] Updating task: {item.title}")
-                
-                # Parse dueDate if provided
-                due_date = None
-                if item.dueDate:
-                    try:
-                        due_date = datetime.fromisoformat(item.dueDate.replace("Z", "+00:00"))
-                        if due_date.tzinfo:
-                            due_date = due_date.replace(tzinfo=None)
-                    except Exception as e:
-                        print(f"[SYNC PUSH] Error parsing dueDate: {e}")
-                
+
+            if (server_time is None) or (client_time and client_time > server_time):
                 db.execute(
                     text('''
-                        UPDATE "Task" 
-                        SET title = :title, 
-                            description = :description, 
-                            is_deleted = :is_deleted, 
-                            "dueDate" = :dueDate 
+                        UPDATE "Task"
+                        SET title = :title,
+                            description = :description,
+                            is_deleted = :is_deleted,
+                            "dueDate" = :dueDate
                         WHERE "taskID" = :taskID
                     '''),
                     {
@@ -180,9 +154,110 @@ def push_changes(payload: PushPayload, db: Session = Depends(get_db)):
                         "dueDate": due_date
                     }
                 )
-            else:
-                print(f"[SYNC PUSH] Skipped (server newer): {item.title}")
 
     db.commit()
-    print(f"[SYNC PUSH] Commit successful!")
+    return {"status": "ok"}
+
+
+# ── Transaction Pull ──
+@router.get("/sync/pull/transactions", response_model=PullResponse)
+def pull_transactions(user_id: str, last_sync: str, db: Session = Depends(get_db)):
+    print(f"[TRANSACTION PULL] user_id: {user_id}")
+    print(f"[TRANSACTION PULL] last_sync: {last_sync}")
+
+    try:
+        cutoff_time = datetime.fromisoformat(last_sync.replace("Z", "+00:00"))
+        if cutoff_time.tzinfo:
+            cutoff_time = cutoff_time.replace(tzinfo=None)
+    except Exception as e:
+        print(f"[TRANSACTION PULL] Error parsing last_sync: {e}")
+        cutoff_time = datetime(2000, 1, 1)
+
+    rows = db.execute(
+        text('''
+            SELECT * FROM "Transaction"
+            WHERE "userID" = :user_id
+            AND updated_at >= :cutoff
+            ORDER BY updated_at DESC
+        '''),
+        {"user_id": user_id, "cutoff": cutoff_time}
+    ).mappings().all()
+
+    print(f"[TRANSACTION PULL] Found {len(rows)} transactions")
+    serialized = [serialize_row(r) for r in rows]
+
+    return {
+        "records": serialized,
+        "server_time": datetime.utcnow().isoformat()
+    }
+
+
+# ── Transaction Push ──
+@router.post("/sync/push/transactions")
+def push_transactions(payload: TransactionPushPayload, db: Session = Depends(get_db)):
+    print(f"[TRANSACTION PUSH] Received {len(payload.records)} records")
+
+    for item in payload.records:
+        existing = db.execute(
+            text('SELECT "transactionID", updated_at FROM "Transaction" WHERE "transactionID" = :transactionID'),
+            {"transactionID": item.transactionID}
+        ).mappings().first()
+
+        date_val = None
+        if item.date:
+            try:
+                date_val = datetime.fromisoformat(item.date.replace("Z", "+00:00"))
+                if date_val.tzinfo:
+                    date_val = date_val.replace(tzinfo=None)
+            except Exception as e:
+                print(f"[TRANSACTION PUSH] Error parsing date: {e}")
+
+        if existing is None:
+            db.execute(
+                text('''
+                    INSERT INTO "Transaction"
+                    ("transactionID", "userID", title, amount, date, state, is_deleted)
+                    VALUES (:transactionID, :userID, :title, :amount, :date, :state, :is_deleted)
+                '''),
+                {
+                    "transactionID": item.transactionID,
+                    "userID": item.userID,
+                    "title": item.title,
+                    "amount": item.amount,
+                    "date": date_val,
+                    "state": item.state,
+                    "is_deleted": item.is_deleted
+                }
+            )
+        else:
+            server_time = existing["updated_at"]
+            try:
+                client_time = datetime.fromisoformat(item.updated_at.replace("Z", "+00:00"))
+                if client_time.tzinfo and server_time and server_time.tzinfo is None:
+                    client_time = client_time.replace(tzinfo=None)
+            except:
+                client_time = None
+
+            if (server_time is None) or (client_time and client_time > server_time):
+                db.execute(
+                    text('''
+                        UPDATE "Transaction"
+                        SET title = :title,
+                            amount = :amount,
+                            date = :date,
+                            state = :state,
+                            is_deleted = :is_deleted
+                        WHERE "transactionID" = :transactionID
+                    '''),
+                    {
+                        "transactionID": item.transactionID,
+                        "title": item.title,
+                        "amount": item.amount,
+                        "date": date_val,
+                        "state": item.state,
+                        "is_deleted": item.is_deleted
+                    }
+                )
+
+    db.commit()
     return {"status": "ok"}

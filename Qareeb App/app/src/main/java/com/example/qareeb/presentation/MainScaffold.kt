@@ -19,8 +19,8 @@ fun MainScaffold(
     taskRepo: TaskRepositoryImpl,
     financeRepo: TransactionRepositoryImpl,
     userRepository: UserRepository,
-    syncRepository: SyncRepository
-    onStartQareeb: () -> Unit
+    syncRepository: SyncRepository,
+    onStartQareeb: () -> Unit // ✅ ADD THIS
 ) {
     val navController = rememberNavController()
 
@@ -37,7 +37,7 @@ fun MainScaffold(
             syncRepository = syncRepository,
             userRepository = userRepository,
             modifier = Modifier.padding(paddingValues),
-            onStartQareeb = onStartQareeb
+            onStartQareeb = onStartQareeb // ✅ PASS IT DOWN
         )
     }
 }

@@ -55,7 +55,7 @@ fun PlanCard(task: TaskDomain) {
                         contentDescription = null,
                         Modifier.size(25.dp)
                     )
-                    Text("TASK-"+task.taskId, fontWeight = FontWeight.Light, color = Color(0xFF726B81))
+                    Text("TASK-"+task.title, fontWeight = FontWeight.Light, color = Color(0xFF726B81))
                     Spacer(Modifier.width(120.dp))
                     Surface(
                         border = BorderStroke(1.dp, stateUI.color),

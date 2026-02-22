@@ -62,7 +62,7 @@ fun PlanCardTask(
                     )
 
                     Text(
-                        text = "TASK-" + task.taskId,
+                        text = "TASK-" + task.title,
                         fontWeight = FontWeight.Light,
                         color = Color(0xFF726B81),
                         fontFamily = interFamily,

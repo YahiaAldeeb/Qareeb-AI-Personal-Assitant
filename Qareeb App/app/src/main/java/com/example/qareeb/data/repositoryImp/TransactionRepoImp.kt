@@ -13,28 +13,28 @@ class TransactionRepositoryImpl(private val transactionDao: TransactionDao) : Tr
 
     override fun getTransactionsByUser(userId: String): Flow<List<TransactionDomain>> {
         return transactionDao.getTransactionsByUser(userId).map { list ->
-            list.map { it.toDomain() }  // ← map each item in the list
+            list.map { it.toDomain() }
         }
     }
 
     override suspend fun insertTransaction(transaction: TransactionDomain): Long {
-        return transactionDao.insertTransaction(transaction.toEntity())  // ← convert to entity
+        return transactionDao.insertTransaction(transaction.toEntity())
     }
 
     override suspend fun updateTransaction(transaction: TransactionDomain) {
-        transactionDao.updateTransaction(transaction.toEntity())  // ← convert to entity
+        transactionDao.updateTransaction(transaction.toEntity())
     }
 
     override suspend fun deleteTransaction(transaction: TransactionDomain) {
-        transactionDao.deleteTransaction(transaction.toEntity())  // ← convert to entity
+        transactionDao.deleteTransaction(transaction.toEntity())
     }
 
     override suspend fun getTransactionsByState(
-        userId: Long,
+        userId: String,          // ← changed Long to String
         state: TransactionState
     ): Flow<List<TransactionDomain>> {
         return transactionDao.getTransactionsByState(userId, state).map { list ->
-            list.map { it.toDomain() }  // ← convert to domain
+            list.map { it.toDomain() }
         }
     }
 }

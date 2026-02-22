@@ -36,12 +36,20 @@ data class Transaction(
     val amount: Double,
     val date: Long = System.currentTimeMillis(),
     val source: String? = null,
-    val description: String?= null,
+    val description: String? = null,
     val title: String,
 
-    // true = income (green), false = outcome/expense (red)
     val income: Boolean = false,
 
-    // Transaction state using enum: "completed", "declined", "pending", "in_progress"
-    val state: TransactionState = TransactionState.PENDING
+    val state: TransactionState = TransactionState.PENDING,
+
+    // ── Sync fields ──
+    @ColumnInfo(name = "is_deleted")
+    val isDeleted: Boolean = false,
+
+    @ColumnInfo(name = "is_synced")
+    val is_synced: Boolean = false,
+
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: String = java.time.OffsetDateTime.now().toString()
 )
