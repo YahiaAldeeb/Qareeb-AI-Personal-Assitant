@@ -11,20 +11,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.qareeb.data.AppDatabase
@@ -78,6 +64,27 @@ class MainActivity : ComponentActivity() {
                 syncRepo.sync("ccabd069-bb4f-465f-9bdd-8f711b85cb18")
             }
         }*/
+                syncRepo.sync(userId)
+            }
+        }
+
+        setContent {
+            // This is your Compose UI Entry Point
+            MainScaffold(
+                sessionManager = sessionManager,
+                taskRepo = taskRepo,
+                financeRepo = financeRepo,
+                onStartQareeb = { checkPermissionsAndStart() }
+            )
+        }
+    }
+    private fun checkPermissionsAndStart() {
+        // 1. Check Overlay Permission (Special)
+        if (!Settings.canDrawOverlays(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            startActivity(intent)
+            return
+        }
 
         /* lifecycleScope.launch {
             val testUserId = "ccabd069-bb4f-465f-9bdd-8f711b85cb18"
@@ -248,3 +255,13 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+        requestPermissionLauncher.launch(perms.toTypedArray())
+    }
+
+    private fun startService() {
+        val intent = Intent(this, QareebListeningService::class.java)
+        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        // Minimize App
+//        moveTaskToBack(true)
+    }
+}

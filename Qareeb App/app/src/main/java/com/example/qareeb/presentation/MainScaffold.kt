@@ -20,6 +20,7 @@ fun MainScaffold(
     financeRepo: TransactionRepositoryImpl,
     userRepository: UserRepository,
     syncRepository: SyncRepository
+    onStartQareeb: () -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -35,7 +36,8 @@ fun MainScaffold(
             financeRepo = financeRepo,
             syncRepository = syncRepository,
             userRepository = userRepository,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
+            onStartQareeb = onStartQareeb
         )
     }
 }
