@@ -19,7 +19,6 @@ import com.example.qareeb.domain.usecase.transaction.DeleteTransactionUseCase
 import com.example.qareeb.domain.usecase.transaction.GetTransactionsByUserUseCase
 import com.example.qareeb.domain.usecase.transaction.UpdateTransactionUseCase
 import com.example.qareeb.presentation.screens.ChatBotScreen
-import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.screens.DashboardScreen
 import com.example.qareeb.presentation.screens.FinanceScreen
 import com.example.qareeb.presentation.screens.LoginScreen
@@ -59,18 +58,17 @@ fun AppNavGraph(
     syncRepository: SyncRepository,
     userRepository: UserRepository,
     modifier: Modifier = Modifier,
-    onStartQareeb: () -> Unit
+    onStartQareeb: () -> Unit // ✅ ADD THIS
 ) {
+    val startDestination = if (sessionManager.isLoggedIn()) Routes.SPLASH else Routes.LOGIN
 
-    val startDestination = if (sessionManager.isLoggedIn()) {
-        Routes.SPLASH      //already logged in,go to splash then dashboard
-    } else {
-        Routes.LOGIN       //never logged in, show login first
-    }
+    val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(sessionManager))
 
-    val userViewModel: UserViewModel = viewModel(
-        factory = UserViewModelFactory(sessionManager)
-    )
+    // ⚠️ IMPORTANT:
+    // If userViewModel.username is a State<String> or String, keep it like this.
+    // If it's a Flow/StateFlow, you must collect it (tell me which type it is).
+    val username = userViewModel.username
+
     val getTasksByUser = GetTasksByUserUseCase(taskRepo)
     val addTask = AddTaskUseCase(taskRepo)
     val updateTask = UpdateTaskUseCase(taskRepo)
@@ -86,8 +84,6 @@ fun AppNavGraph(
         startDestination = startDestination,
         modifier = modifier
     ) {
-
-        //Splash
         composable(Routes.SPLASH) {
             SplashScreen(
                 onSplashFinished = {
@@ -98,20 +94,12 @@ fun AppNavGraph(
             )
         }
 
-        //Dashboard
         composable(Routes.DASHBOARD) {
-            val userViewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(sessionManager)
-            )
-            val username = userViewModel.username
-
-            android.util.Log.d("NAV", "Dashboard userId: ${sessionManager.getUserId()}")
-
             val vm: DashboardViewModel = viewModel(
                 factory = DashboardViewModelFactory(
                     getTasksByUser = getTasksByUser,
                     getTransactionsByUser = getTransactionsByUser,
-                    sessionManager = sessionManager,  // ← sessionManager instead of userId
+                    sessionManager = sessionManager,
                     username = username
                 )
             )
@@ -122,55 +110,39 @@ fun AppNavGraph(
             )
         }
 
-        // ── Tasks ──
         composable(Routes.TASKS) {
-            val userViewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(sessionManager)
-            )
-            val username = userViewModel.username
-
-            android.util.Log.d("NAV", "Tasks userId: ${sessionManager.getUserId()}")
-
             val vm: TaskViewModel = viewModel(
                 factory = TaskViewModelFactory(
                     getTasksByUser = getTasksByUser,
                     addTask = addTask,
                     updateTask = updateTask,
                     deleteTask = deleteTask,
-                    sessionManager = sessionManager,  // ← sessionManager instead of userId
+                    sessionManager = sessionManager,
                     username = username
                 )
             )
             TasksScreen(viewModel = vm)
         }
 
-        //finance
         composable(Routes.FINANCE) {
-            val userViewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(sessionManager)
-            )
-            val username = userViewModel.username
-
-            android.util.Log.d("NAV", "Finance userId: ${sessionManager.getUserId()}")
-
             val vm: FinanceViewModel = viewModel(
                 factory = FinanceViewModelFactory(
                     getTransactionsByUser = getTransactionsByUser,
                     updateTransaction = updateTransaction,
                     addTransaction = addTransaction,
                     deleteTransaction = deleteTransaction,
-                    sessionManager = sessionManager,  // ← sessionManager instead of userId
+                    sessionManager = sessionManager,
                     username = username
                 )
             )
             FinanceScreen(viewModel = vm)
         }
-        //login
+
         composable(Routes.LOGIN) {
             val vm: LoginViewModel = viewModel(
                 factory = LoginViewModelFactory(
                     userRepository = userRepository,
-                    sessionManager = sessionManager,  // ← already available in AppNavGraph
+                    sessionManager = sessionManager,
                     syncRepository = syncRepository
                 )
             )
@@ -186,7 +158,6 @@ fun AppNavGraph(
             )
         }
 
-        //register
         composable(Routes.REGISTER) {
             val vm: SignUpViewModel = viewModel(
                 factory = SignUpViewModelFactory(
@@ -208,7 +179,8 @@ fun AppNavGraph(
                 }
             )
         }
-        // ── ChatBot ──
+
+        // ✅ FIXED ChatBot route
         composable(Routes.CHATBOT) {
             ChatBotScreen(
                 username = username,

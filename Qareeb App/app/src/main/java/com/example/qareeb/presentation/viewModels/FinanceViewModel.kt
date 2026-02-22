@@ -15,20 +15,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 class FinanceViewModel(
     private val getTransactionsByUser: GetTransactionsByUserUseCase,
     private val updateTransaction: UpdateTransactionUseCase,
     private val addTransaction: AddTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
-    private val sessionManager: SessionManager,  // ← changed
+    private val sessionManager: SessionManager,
     val username: String
 ) : ViewModel() {
 
-    // reads from SharedPreferences at creation time, always correct
     private val userId: String = sessionManager.getUserId() ?: ""
 
     init {
@@ -46,14 +48,30 @@ class FinanceViewModel(
     // all transactions from DB
     private val allTransactions: StateFlow<List<TransactionDomain>> =
         getTransactionsByUser(userId)
+            .onEach { list ->
+                android.util.Log.d("FINANCE_VM", "Transactions loaded: ${list.size}")
+                list.forEach { t ->
+                    val localDate = Instant.ofEpochMilli(t.date)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                    android.util.Log.d("FINANCE_VM", "  - '${t.title}', date millis: ${t.date}, localDate: $localDate")
+                }
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // today's transactions filtered by date and category
     val todayTransactions: StateFlow<List<TransactionDomain>> = combine(
         allTransactions, _selectedDate, _selectedCategory
     ) { transactions, date, category ->
+        android.util.Log.d("FINANCE_VM", "Filtering for date: $date, transactions count: ${transactions.size}")
         transactions
-            .filter { it.date.toLocalDate() == date }
+            .filter { t ->
+                val tDate = Instant.ofEpochMilli(t.date)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                android.util.Log.d("FINANCE_VM", "  Comparing: $tDate == $date → ${tDate == date}")
+                tDate == date
+            }
             .filter { matchesCategory(it, category) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -62,7 +80,12 @@ class FinanceViewModel(
         allTransactions, _selectedDate, _selectedCategory
     ) { transactions, date, category ->
         transactions
-            .filter { it.date.toLocalDate() == date.plusDays(1) }
+            .filter { t ->
+                val tDate = Instant.ofEpochMilli(t.date)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                tDate == date.plusDays(1)
+            }
             .filter { matchesCategory(it, category) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -97,7 +120,7 @@ class FinanceViewModelFactory(
     private val updateTransaction: UpdateTransactionUseCase,
     private val addTransaction: AddTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
-    private val sessionManager: SessionManager,  // ← changed
+    private val sessionManager: SessionManager,
     private val username: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
