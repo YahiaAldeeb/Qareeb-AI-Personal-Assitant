@@ -8,6 +8,7 @@ import com.example.qareeb.domain.model.TransactionDomain
 import com.example.qareeb.domain.model.enums.TaskStatus
 import com.example.qareeb.domain.usecase.task.GetTasksByUserUseCase
 import com.example.qareeb.domain.usecase.transaction.GetTransactionsByUserUseCase
+import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.presentation.utilis.toLocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,9 +20,16 @@ import java.time.LocalDate
 class DashboardViewModel(
     private val getTasksByUser: GetTasksByUserUseCase,
     private val getTransactionsByUser: GetTransactionsByUserUseCase,
-    private val userId: String,
+    private val sessionManager: SessionManager,  // ← changed
     val username: String
 ) : ViewModel() {
+
+    // reads from SharedPreferences at creation time, always correct
+    private val userId: String = sessionManager.getUserId() ?: ""
+
+    init {
+        android.util.Log.d("DASHBOARD_VM", "DashboardViewModel userId: $userId")
+    }
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate
@@ -46,13 +54,13 @@ class DashboardViewModel(
         tasks.count { it.dueDate?.toLocalDate() == date }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // priority tasks
+    // priority tasks count
     val priorityTasksCount: StateFlow<Int> = allTasks
         .combine(_selectedDate) { tasks, date ->
             tasks.count { it.priority != null && it.dueDate?.toLocalDate() == date }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // completed tasks
+    // completed tasks count
     val completedTasksCount: StateFlow<Int> = allTasks
         .combine(_selectedDate) { tasks, date ->
             tasks.count { it.status == TaskStatus.COMPLETED && it.dueDate?.toLocalDate() == date }
@@ -81,12 +89,12 @@ class DashboardViewModel(
 class DashboardViewModelFactory(
     private val getTasksByUser: GetTasksByUserUseCase,
     private val getTransactionsByUser: GetTransactionsByUserUseCase,
-    private val userId: String,
+    private val sessionManager: SessionManager,  // ← changed
     private val username: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return DashboardViewModel(
-            getTasksByUser, getTransactionsByUser, userId, username
+            getTasksByUser, getTransactionsByUser, sessionManager, username
         ) as T
     }
 }
