@@ -58,7 +58,8 @@ fun AppNavGraph(
     financeRepo: TransactionRepositoryImpl,
     syncRepository: SyncRepository,
     userRepository: UserRepository,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartQareeb: () -> Unit
 ) {
 
     val startDestination = if (sessionManager.isLoggedIn()) {
@@ -209,7 +210,10 @@ fun AppNavGraph(
         }
         // ── ChatBot ──
         composable(Routes.CHATBOT) {
-            ChatBotScreen()
+            ChatBotScreen(
+                username = username,
+                onStartQareeb = onStartQareeb
+            )
         }
     }
 }
