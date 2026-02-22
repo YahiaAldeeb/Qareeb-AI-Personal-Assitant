@@ -78,8 +78,18 @@ class SyncRepository(
     private suspend fun pull(userId: String) {
         Log.d(TAG, "--- PULL START ---")
 
-        val lastSync = prefs.getString(LAST_SYNC_KEY, "2000-01-01T00:00:00")
-            ?: "2000-01-01T00:00:00"
+        // ← KEY FIX: if DB is empty, always force a full sync
+        val localTaskCount = taskDao.getTasksByUserOneShot(userId).size
+        Log.d(TAG, "Local task count: $localTaskCount")
+
+        val lastSync = if (localTaskCount == 0) {
+            Log.d(TAG, "DB is empty → forcing full sync from beginning")
+            "2000-01-01T00:00:00"
+        } else {
+            prefs.getString(LAST_SYNC_KEY, "2000-01-01T00:00:00")
+                ?: "2000-01-01T00:00:00"
+        }
+
         Log.d(TAG, "Last sync: $lastSync")
 
         val response = try {
@@ -141,7 +151,7 @@ class SyncRepository(
 
                     val task = Task(
                         taskId = remote.taskID,
-                        userId = userId,          // ← FIX: use local userId, not remote.userID
+                        userId = userId,
                         title = remote.title,
                         description = remote.description,
                         updatedAt = remote.updated_at,
@@ -167,8 +177,13 @@ class SyncRepository(
         Log.d(TAG, "Tasks in DB AFTER sync: $tasksAfterSync")
         Log.d(TAG, "Results: $upsertedCount upserted, $deletedCount deleted, $errorCount errors")
 
-        prefs.edit().putString(LAST_SYNC_KEY, response.server_time).apply()
-        Log.d(TAG, "Updated last_sync to: ${response.server_time}")
+        // Only update last_sync if we actually received and saved tasks
+        if (upsertedCount > 0 || deletedCount > 0) {
+            prefs.edit().putString(LAST_SYNC_KEY, response.server_time).apply()
+            Log.d(TAG, "Updated last_sync to: ${response.server_time}")
+        } else {
+            Log.d(TAG, "No changes — last_sync NOT updated")
+        }
 
         Log.d(TAG, "--- PULL COMPLETE ---")
     }
