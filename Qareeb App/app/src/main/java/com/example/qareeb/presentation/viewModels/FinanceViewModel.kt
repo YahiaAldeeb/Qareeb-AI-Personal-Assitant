@@ -1,4 +1,5 @@
 package com.example.qareeb.presentation.viewModels
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,7 @@ import com.example.qareeb.domain.usecase.transaction.AddTransactionUseCase
 import com.example.qareeb.domain.usecase.transaction.DeleteTransactionUseCase
 import com.example.qareeb.domain.usecase.transaction.GetTransactionsByUserUseCase
 import com.example.qareeb.domain.usecase.transaction.UpdateTransactionUseCase
+import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.presentation.utilis.toLocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,9 +24,16 @@ class FinanceViewModel(
     private val updateTransaction: UpdateTransactionUseCase,
     private val addTransaction: AddTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
-    private val userId: String,
+    private val sessionManager: SessionManager,  // ← changed
     val username: String
 ) : ViewModel() {
+
+    // reads from SharedPreferences at creation time, always correct
+    private val userId: String = sessionManager.getUserId() ?: ""
+
+    init {
+        android.util.Log.d("FINANCE_VM", "FinanceViewModel userId: $userId")
+    }
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate
@@ -88,13 +97,13 @@ class FinanceViewModelFactory(
     private val updateTransaction: UpdateTransactionUseCase,
     private val addTransaction: AddTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
-    private val userId: String,
+    private val sessionManager: SessionManager,  // ← changed
     private val username: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return FinanceViewModel(
             getTransactionsByUser, updateTransaction,
-            addTransaction, deleteTransaction, userId, username
+            addTransaction, deleteTransaction, sessionManager, username
         ) as T
     }
 }

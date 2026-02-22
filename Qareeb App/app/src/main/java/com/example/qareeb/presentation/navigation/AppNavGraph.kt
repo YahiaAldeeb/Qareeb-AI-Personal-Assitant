@@ -6,7 +6,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.qareeb.data.remote.RetrofitInstance
 import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
@@ -20,10 +19,10 @@ import com.example.qareeb.domain.usecase.transaction.DeleteTransactionUseCase
 import com.example.qareeb.domain.usecase.transaction.GetTransactionsByUserUseCase
 import com.example.qareeb.domain.usecase.transaction.UpdateTransactionUseCase
 import com.example.qareeb.presentation.screens.ChatBotScreen
-import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.screens.DashboardScreen
 import com.example.qareeb.presentation.screens.FinanceScreen
 import com.example.qareeb.presentation.screens.LoginScreen
+import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.screens.TasksScreen
 import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.presentation.viewModels.DashboardViewModel
@@ -56,12 +55,7 @@ fun AppNavGraph(
     userRepository: UserRepository,
     modifier: Modifier = Modifier
 ) {
-    val userViewModel: UserViewModel = viewModel(
-        factory = UserViewModelFactory(sessionManager)
-    )
-    val userId = userViewModel.userId ?: ""
-    val username = userViewModel.username
-
+    // Use cases created once — no userId dependency here
     val getTasksByUser = GetTasksByUserUseCase(taskRepo)
     val addTask = AddTaskUseCase(taskRepo)
     val updateTask = UpdateTaskUseCase(taskRepo)
@@ -82,7 +76,8 @@ fun AppNavGraph(
         composable(Routes.SPLASH) {
             SplashScreen(
                 onSplashFinished = {
-                    val destination = if (sessionManager.isLoggedIn()) Routes.DASHBOARD else Routes.LOGIN
+                    val destination =
+                        if (sessionManager.isLoggedIn()) Routes.DASHBOARD else Routes.LOGIN
                     navController.navigate(destination) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
                     }
@@ -94,7 +89,7 @@ fun AppNavGraph(
         composable(Routes.LOGIN) {
             val vm: LoginViewModel = viewModel(
                 factory = LoginViewModelFactory(
-                    userRepository = userRepository,  // ✅ fixed: lowercase = the parameter instance
+                    userRepository = userRepository,
                     sessionManager = sessionManager,
                     syncRepository = syncRepository
                 )
@@ -113,11 +108,18 @@ fun AppNavGraph(
 
         // ── Dashboard ──
         composable(Routes.DASHBOARD) {
+            val userViewModel: UserViewModel = viewModel(
+                factory = UserViewModelFactory(sessionManager)
+            )
+            val username = userViewModel.username
+
+            android.util.Log.d("NAV", "Dashboard userId: ${sessionManager.getUserId()}")
+
             val vm: DashboardViewModel = viewModel(
                 factory = DashboardViewModelFactory(
                     getTasksByUser = getTasksByUser,
                     getTransactionsByUser = getTransactionsByUser,
-                    userId = userId,
+                    sessionManager = sessionManager,  // ← sessionManager instead of userId
                     username = username
                 )
             )
@@ -130,13 +132,20 @@ fun AppNavGraph(
 
         // ── Tasks ──
         composable(Routes.TASKS) {
+            val userViewModel: UserViewModel = viewModel(
+                factory = UserViewModelFactory(sessionManager)
+            )
+            val username = userViewModel.username
+
+            android.util.Log.d("NAV", "Tasks userId: ${sessionManager.getUserId()}")
+
             val vm: TaskViewModel = viewModel(
                 factory = TaskViewModelFactory(
                     getTasksByUser = getTasksByUser,
                     addTask = addTask,
                     updateTask = updateTask,
                     deleteTask = deleteTask,
-                    userId = userId,
+                    sessionManager = sessionManager,  // ← sessionManager instead of userId
                     username = username
                 )
             )
@@ -145,13 +154,20 @@ fun AppNavGraph(
 
         // ── Finance ──
         composable(Routes.FINANCE) {
+            val userViewModel: UserViewModel = viewModel(
+                factory = UserViewModelFactory(sessionManager)
+            )
+            val username = userViewModel.username
+
+            android.util.Log.d("NAV", "Finance userId: ${sessionManager.getUserId()}")
+
             val vm: FinanceViewModel = viewModel(
                 factory = FinanceViewModelFactory(
                     getTransactionsByUser = getTransactionsByUser,
                     updateTransaction = updateTransaction,
                     addTransaction = addTransaction,
                     deleteTransaction = deleteTransaction,
-                    userId = userId,
+                    sessionManager = sessionManager,  // ← sessionManager instead of userId
                     username = username
                 )
             )

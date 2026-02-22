@@ -9,6 +9,7 @@ import com.example.qareeb.domain.usecase.task.AddTaskUseCase
 import com.example.qareeb.domain.usecase.task.DeleteTaskUseCase
 import com.example.qareeb.domain.usecase.task.GetTasksByUserUseCase
 import com.example.qareeb.domain.usecase.task.UpdateTaskUseCase
+import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.presentation.utilis.toLocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,11 +25,14 @@ class TaskViewModel(
     private val addTask: AddTaskUseCase,
     private val updateTask: UpdateTaskUseCase,
     private val deleteTask: DeleteTaskUseCase,
-    private val userId: String,
+    private val sessionManager: SessionManager,  // ← changed
     val username: String
 ) : ViewModel() {
 
     val filters = listOf("All", "Work", "Sports", "Personal", "Travel")
+
+    // ← reads directly from SharedPreferences at creation time, always correct
+    private val userId: String = sessionManager.getUserId() ?: ""
 
     init {
         android.util.Log.d("VIEWMODEL", "ViewModel userId: $userId")
@@ -126,12 +130,12 @@ class TaskViewModelFactory(
     private val addTask: AddTaskUseCase,
     private val updateTask: UpdateTaskUseCase,
     private val deleteTask: DeleteTaskUseCase,
-    private val userId: String,
+    private val sessionManager: SessionManager,  // ← changed
     private val username: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return TaskViewModel(
-            getTasksByUser, addTask, updateTask, deleteTask, userId, username
+            getTasksByUser, addTask, updateTask, deleteTask, sessionManager, username
         ) as T
     }
 }
