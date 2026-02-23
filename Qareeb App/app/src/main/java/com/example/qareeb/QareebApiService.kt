@@ -7,7 +7,7 @@ import retrofit2.http.Part
 
 interface QareebApiService {
     @Multipart
-    @POST("/transcribe") // Matches your Python route
+    @POST("/api/ai/transcribe") // Matches your Python route
     suspend fun uploadAudio(
         @Part file: MultipartBody.Part // Matches 'file: UploadFile' in Python
     ): QareebResponse

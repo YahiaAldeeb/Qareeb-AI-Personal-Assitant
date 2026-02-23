@@ -9,8 +9,8 @@ import java.util.UUID
     foreignKeys = [
         ForeignKey(
             entity = User::class,
-            parentColumns = ["user_id"],
-            childColumns = ["user_id"],
+            parentColumns = ["userID"],
+            childColumns = ["userID"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
@@ -20,14 +20,14 @@ import java.util.UUID
             onDelete = ForeignKey.SET_NULL
         )
     ],
-    indices = [Index("user_id"), Index("category_id")]
+    indices = [Index("userID"), Index("category_id")]
 )
 data class Transaction(
     @PrimaryKey
     @ColumnInfo(name = "transaction_id")
     val transactionId: String = UUID.randomUUID().toString(),
 
-    @ColumnInfo(name = "user_id")
+    @ColumnInfo(name = "userID")
     val userId: String,
 
     @ColumnInfo(name = "category_id")

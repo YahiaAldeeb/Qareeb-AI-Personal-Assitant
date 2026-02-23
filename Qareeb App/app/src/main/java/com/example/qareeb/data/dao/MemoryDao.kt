@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MemoryDao {
-    @Query("SELECT * FROM memory WHERE user_id = :userId ORDER BY created_at DESC")
+    @Query("SELECT * FROM memory WHERE userID = :userId ORDER BY created_at DESC")
     fun getMemoriesByUser(userId: String): Flow<List<Memory>>
 
     @Insert

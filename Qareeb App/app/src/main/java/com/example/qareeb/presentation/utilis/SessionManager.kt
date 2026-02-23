@@ -30,7 +30,7 @@ class SessionManager private constructor(context: Context) {
 
     companion object {
         private const val PREFS_NAME = "qareeb_session_prefs" // ← new name, fresh start
-        private const val USER_ID = "user_id"
+        private const val userID = "userID"
         private const val USER_NAME = "user_name"
         private const val USER_EMAIL = "user_email"
 
@@ -48,7 +48,7 @@ class SessionManager private constructor(context: Context) {
 
     fun saveUserSession(userId: String, username: String, email: String? = null) {
         prefs.edit().apply {
-            putString(USER_ID, userId)
+            putString(userID, userId)
             putString(USER_NAME, username)
             email?.let { putString(USER_EMAIL, it) }
             apply()
@@ -57,7 +57,7 @@ class SessionManager private constructor(context: Context) {
     }
 
     fun saveUserId(userId: String) {
-        prefs.edit().putString(USER_ID, userId).apply()
+        prefs.edit().putString(userID, userId).apply()
         android.util.Log.d("SESSION", "Saved userId: $userId")
     }
 
@@ -70,7 +70,7 @@ class SessionManager private constructor(context: Context) {
     }
 
     fun getUserId(): String? {
-        val id = prefs.getString(USER_ID, null)
+        val id = prefs.getString(userID, null)
         android.util.Log.d("SESSION", "getUserId → $id")
         return id
     }

@@ -7,7 +7,7 @@ import java.util.UUID
 @Entity(tableName = "user")
 data class User(
     @PrimaryKey
-    @ColumnInfo(name = "user_id")
+    @ColumnInfo(name = "userID")
     val userId: String = UUID.randomUUID().toString(),
 
     val name: String,

@@ -30,10 +30,10 @@ class QareebListeningService : Service() {
 
     // IMPORTANT: keep your real key here
     private val ACCESS_KEY =
-        "BaoJLQKkfbjG+Xn4aYfa3altQ1tXbAgwCL1NFu2WEuti33cYmnM5JQ=="
+        "63fsjb728DMV7pIMWuJ6SN1MG7oiR3WkgRJitIN8G2L/Na+Vy6A+Eg=="
 
     // This file should exist in app/src/main/assets/
-    private val KEYWORD_ASSET_NAME = "Hi-q_en_android_v3_0_0.ppn"
+    private val KEYWORD_ASSET_NAME = "hey-q.ppn"
 
     private var porcupineManager: PorcupineManager? = null
 
