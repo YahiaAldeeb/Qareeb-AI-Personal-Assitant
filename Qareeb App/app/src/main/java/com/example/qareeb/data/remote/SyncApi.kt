@@ -50,7 +50,7 @@ data class TransactionPullResponse(
 interface SyncApi {
     @GET("sync/pull")
     suspend fun pull(
-        @Query("user_id") userId: String,
+        @Query("userID") userId: String,
         @Query("last_sync") lastSync: String
     ): PullResponse
 
@@ -59,7 +59,7 @@ interface SyncApi {
 
     @GET("sync/pull/transactions")
     suspend fun pullTransactions(
-        @Query("user_id") userId: String,
+        @Query("userID") userId: String,
         @Query("last_sync") lastSync: String
     ): TransactionPullResponse
 

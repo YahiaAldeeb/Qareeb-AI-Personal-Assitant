@@ -7,8 +7,8 @@ import androidx.room.*
     foreignKeys = [
         ForeignKey(
             entity = User::class,
-            parentColumns = ["user_id"],
-            childColumns = ["user_id"],
+            parentColumns = ["userID"],
+            childColumns = ["userID"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
@@ -18,14 +18,14 @@ import androidx.room.*
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("user_id"), Index("task_id")]
+    indices = [Index("userID"), Index("task_id")]
 )
 data class Activity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "activity_id")
     val activityId: Long = 0,
 
-    @ColumnInfo(name = "user_id")
+    @ColumnInfo(name = "userID")
     val userId: Long,
 
     @ColumnInfo(name = "task_id")

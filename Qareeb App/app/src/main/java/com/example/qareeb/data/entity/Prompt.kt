@@ -8,7 +8,7 @@ data class Prompt(
     @ColumnInfo(name = "prompt_id")
     val promptId: Long = 0,
 
-    @ColumnInfo(name = "user_id")
+    @ColumnInfo(name = "userID")
     val userId: Long,
 
     @ColumnInfo(name = "user_message")

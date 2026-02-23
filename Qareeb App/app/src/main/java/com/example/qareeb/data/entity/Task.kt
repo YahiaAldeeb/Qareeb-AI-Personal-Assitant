@@ -9,19 +9,19 @@ import java.util.UUID
     foreignKeys = [
         ForeignKey(
             entity = User::class,
-            parentColumns = ["user_id"],
-            childColumns = ["user_id"],
+            parentColumns = ["userID"],
+            childColumns = ["userID"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("user_id")]
+    indices = [Index("userID")]
 )
 data class Task(
     @PrimaryKey
     @ColumnInfo(name = "task_id")
     val taskId: String = UUID.randomUUID().toString(),
 
-    @ColumnInfo(name = "user_id")
+    @ColumnInfo(name = "userID")
     val userId: String,
     val title: String,
     val description: String? = null,

@@ -8,7 +8,7 @@ data class Memory(
     @ColumnInfo(name = "memory_id")
     val memoryId: Long = 0,
 
-    @ColumnInfo(name = "user_id")
+    @ColumnInfo(name = "userID")
     val userId: Long,
 
     val fact: String,
