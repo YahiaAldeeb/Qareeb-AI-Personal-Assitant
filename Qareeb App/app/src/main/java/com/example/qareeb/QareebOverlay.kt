@@ -20,13 +20,26 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.example.qareeb.data.AppDatabase
+import com.example.qareeb.data.dao.TaskDao
+import com.example.qareeb.data.dao.TransactionDao
+import com.example.qareeb.data.entity.Task
+import com.example.qareeb.data.entity.Transaction
+import com.example.qareeb.data.remote.SyncRepository
+import com.example.qareeb.domain.model.enums.TaskStatus
+import com.example.qareeb.domain.model.enums.TransactionState
+import com.example.qareeb.presentation.utilis.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
 enum class OverlayState {
@@ -38,8 +51,14 @@ enum class OverlayState {
 
 class QareebOverlay(
     private val context: Context,
+    private val sessionManager: SessionManager,
+    private val syncRepository: SyncRepository,
     private val onDismiss: () -> Unit
 ) {
+    
+    private val db: AppDatabase = AppDatabase.getDatabase(context)
+    private val transactionDao: TransactionDao = db.transactionDao()
+    private val taskDao: TaskDao = db.taskDao()
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var overlayView: View? = null
@@ -179,10 +198,70 @@ class QareebOverlay(
     private fun uploadAudioToServer(file: File) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val requestFile = file.asRequestBody("audio/mp3".toMediaTypeOrNull())
-                val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+                // Get userID from session
+                val userId = sessionManager.getUserId()
+                if (userId.isNullOrEmpty()) {
+                    Log.e("Qareeb", "Upload failed: userID is null or empty")
+                    withContext(Dispatchers.Main) {
+                        setOverlayState(OverlayState.FAILED)
+                        mainHandler.postDelayed({ closeOverlay() }, 2000)
+                    }
+                    return@launch
+                }
 
-                val response = NetworkModule.api.uploadAudio(body)
+                val requestFile = file.asRequestBody("audio/mp3".toMediaTypeOrNull())
+                val filePart = MultipartBody.Part.createFormData("file", file.name, requestFile)
+                
+                // Create userID as multipart form field (null filename for non-file parts)
+                val userIdRequestBody = userId.toRequestBody("text/plain".toMediaTypeOrNull())
+                val userIdPart = MultipartBody.Part.createFormData("userID", null, userIdRequestBody)
+
+                val response = NetworkModule.api.uploadAudio(filePart, userIdPart)
+
+                // Direct insertion: Parse and insert transaction/task directly from API response
+                if (response.status == "success" && response.result?.success == true) {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            when (response.intent) {
+                                "FINANCE" -> {
+                                    val transactionData = response.result.data?.transaction
+                                    if (transactionData != null) {
+                                        val transaction = parseTransactionFromResponse(transactionData, userId)
+                                        transactionDao.upsertTransaction(transaction)
+                                        Log.d("Qareeb", "Transaction inserted directly: ${transaction.transactionId}")
+                                    } else {
+                                        Log.w("Qareeb", "Transaction data missing in response, falling back to sync")
+                                        syncRepository.sync(userId)
+                                    }
+                                }
+                                "TASK_TRACKER" -> {
+                                    val taskData = response.result.data?.task
+                                    if (taskData != null) {
+                                        val task = parseTaskFromResponse(taskData, userId)
+                                        taskDao.upsertTask(task)
+                                        Log.d("Qareeb", "Task inserted directly: ${task.taskId}")
+                                    } else {
+                                        Log.w("Qareeb", "Task data missing in response, falling back to sync")
+                                        syncRepository.sync(userId)
+                                    }
+                                }
+                                else -> {
+                                    Log.d("Qareeb", "No transaction/task created (intent: ${response.intent})")
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("Qareeb", "Failed to insert transaction/task: ${e.message}", e)
+                        // Fallback to sync if direct insertion fails
+                        try {
+                            withContext(Dispatchers.IO) {
+                                syncRepository.sync(userId)
+                            }
+                        } catch (syncError: Exception) {
+                            Log.e("Qareeb", "Sync fallback also failed: ${syncError.message}", syncError)
+                        }
+                    }
+                }
 
                 withContext(Dispatchers.Main) {
                     // Success state
@@ -190,7 +269,7 @@ class QareebOverlay(
                     mainHandler.postDelayed({ closeOverlay() }, 2000)
                 }
             } catch (e: Exception) {
-                Log.e("Qareeb", "Upload failed: ${e.message}")
+                Log.e("Qareeb", "Upload failed: ${e.message}", e)
                 withContext(Dispatchers.Main) {
                     // Failed state
                     setOverlayState(OverlayState.FAILED)
@@ -307,5 +386,158 @@ class QareebOverlay(
         params.gravity = Gravity.BOTTOM
         params.y = 100
         return params
+    }
+    
+    /**
+     * Parse transaction from API response and convert to Room entity
+     * Ensures userID is set correctly from the session
+     */
+    private fun parseTransactionFromResponse(
+        transactionData: TransactionResponse,
+        userId: String
+    ): Transaction {
+        // Parse date string to milliseconds
+        val dateMillis = try {
+            if (transactionData.date != null) {
+                try {
+                    OffsetDateTime.parse(transactionData.date).toInstant().toEpochMilli()
+                } catch (e: Exception) {
+                    try {
+                        Instant.parse(transactionData.date).toEpochMilli()
+                    } catch (e2: Exception) {
+                        System.currentTimeMillis()
+                    }
+                }
+            } else {
+                System.currentTimeMillis()
+            }
+        } catch (e: Exception) {
+            System.currentTimeMillis()
+        }
+        
+        // Parse state
+        val state = try {
+            transactionData.state?.let { TransactionState.valueOf(it.uppercase()) }
+                ?: TransactionState.PENDING
+        } catch (e: Exception) {
+            TransactionState.PENDING
+        }
+        
+        // Ensure userID from session is used (not from API response for security)
+        return Transaction(
+            transactionId = transactionData.transactionID,
+            userId = userId, // Use session userID, not from API
+            categoryId = transactionData.categoryID,
+            amount = transactionData.amount ?: 0.0,
+            date = dateMillis,
+            source = transactionData.source,
+            description = transactionData.description,
+            title = transactionData.title ?: transactionData.description ?: "Transaction",
+            income = transactionData.income ?: false,
+            state = state,
+            isDeleted = transactionData.is_deleted ?: false,
+            is_synced = true, // Mark as synced since it came from server
+            updatedAt = transactionData.created_at ?: java.time.OffsetDateTime.now().toString()
+        )
+    }
+    
+    /**
+     * Parse task from API response and convert to Room entity
+     * Ensures userID is set correctly from the session
+     */
+    private fun parseTaskFromResponse(
+        taskData: TaskResponse,
+        userId: String
+    ): Task {
+        // Parse dueDate string to milliseconds
+        // Handles multiple formats: YYYY-MM-DD, ISO datetime, etc.
+        val dueDateMillis = taskData.dueDate?.let { dueDateStr ->
+            try {
+                // Try parsing as full datetime first
+                try {
+                    OffsetDateTime.parse(dueDateStr).toInstant().toEpochMilli()
+                } catch (e: Exception) {
+                    try {
+                        Instant.parse(dueDateStr).toEpochMilli()
+                    } catch (e2: Exception) {
+                        // Try parsing as date only (YYYY-MM-DD)
+                        try {
+                            java.time.LocalDate.parse(dueDateStr)
+                                .atStartOfDay(ZoneId.systemDefault())
+                                .toInstant()
+                                .toEpochMilli()
+                        } catch (e3: Exception) {
+                            Log.w("Qareeb", "Could not parse dueDate: $dueDateStr, using today")
+                            // If parsing fails, use today's date at start of day
+                            java.time.LocalDate.now()
+                                .atStartOfDay(ZoneId.systemDefault())
+                                .toInstant()
+                                .toEpochMilli()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("Qareeb", "Error parsing dueDate: ${e.message}")
+                // Default to today at start of day
+                java.time.LocalDate.now()
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            }
+        } ?: run {
+            // If no dueDate provided, use today at start of day
+            java.time.LocalDate.now()
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        }
+        
+        // Parse created_at to milliseconds
+        val createdAtMillis = taskData.created_at?.let { createdAtStr ->
+            try {
+                try {
+                    OffsetDateTime.parse(createdAtStr).toInstant().toEpochMilli()
+                } catch (e: Exception) {
+                    try {
+                        Instant.parse(createdAtStr).toEpochMilli()
+                    } catch (e2: Exception) {
+                        System.currentTimeMillis()
+                    }
+                }
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
+        } ?: System.currentTimeMillis()
+        
+        // Parse status - handle lowercase status strings
+        val status = try {
+            taskData.status?.let { statusStr ->
+                // Handle both "pending" and "PENDING" formats
+                val normalizedStatus = statusStr.uppercase()
+                TaskStatus.valueOf(normalizedStatus)
+            } ?: TaskStatus.PENDING
+        } catch (e: Exception) {
+            Log.w("Qareeb", "Unknown task status: ${taskData.status}, defaulting to PENDING")
+            TaskStatus.PENDING
+        }
+        
+        // Ensure userID from session is used (not from API response for security)
+        val task = Task(
+            taskId = taskData.taskID,
+            userId = userId, // Use session userID, not from API
+            title = taskData.title ?: "Task",
+            description = taskData.description,
+            status = status,
+            progressPercentage = taskData.progressPercentage ?: 0,
+            priority = taskData.priority,
+            dueDate = dueDateMillis,
+            createdAt = createdAtMillis,
+            updatedAt = taskData.updated_at ?: System.currentTimeMillis().toString(),
+            isDeleted = taskData.is_deleted ?: false,
+            is_synced = true // Mark as synced since it came from server
+        )
+        
+        Log.d("Qareeb", "Parsed task: id=${task.taskId}, title=${task.title}, dueDate=${task.dueDate}, status=${task.status}")
+        return task
     }
 }

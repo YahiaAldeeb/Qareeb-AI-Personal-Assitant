@@ -9,6 +9,7 @@ interface QareebApiService {
     @Multipart
     @POST("/api/ai/transcribe") // Matches your Python route
     suspend fun uploadAudio(
-        @Part file: MultipartBody.Part // Matches 'file: UploadFile' in Python
+        @Part file: MultipartBody.Part, // Matches 'file: UploadFile' in Python
+        @Part userID: MultipartBody.Part // userID from session
     ): QareebResponse
 }
