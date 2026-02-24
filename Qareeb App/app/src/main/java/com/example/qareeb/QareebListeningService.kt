@@ -12,6 +12,10 @@ import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.example.qareeb.data.AppDatabase
+import com.example.qareeb.data.remote.RetrofitInstance
+import com.example.qareeb.data.remote.SyncRepository
+import com.example.qareeb.presentation.utilis.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -129,7 +133,19 @@ class QareebListeningService : Service() {
 
         overlayVisible = true
 
-        val overlay = QareebOverlay(this) {
+        val sessionManager = SessionManager.getInstance(this)
+        
+        // Create SyncRepository for the overlay to trigger sync after voice commands
+        val db = AppDatabase.getDatabase(applicationContext)
+        val syncRepository = SyncRepository(
+            taskDao = db.taskDao(),
+            userDao = db.userDao(),
+            transactionDao = db.transactionDao(),
+            api = RetrofitInstance.syncApi,
+            prefs = getSharedPreferences("sync_prefs", MODE_PRIVATE)
+        )
+        
+        val overlay = QareebOverlay(this, sessionManager, syncRepository) {
             Log.d(TAG, "Overlay closed. Restarting listening...")
             overlayVisible = false
             serviceScope.launch(Dispatchers.Default) {

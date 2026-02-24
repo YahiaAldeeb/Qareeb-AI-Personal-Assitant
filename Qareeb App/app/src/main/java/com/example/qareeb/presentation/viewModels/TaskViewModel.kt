@@ -46,16 +46,25 @@ class TaskViewModel(
 
     // ── Raw tasks from DB ──
     private val allTasks: StateFlow<List<TaskDomain>> = getTasksByUser(userId)
-        .onEach { android.util.Log.d("VIEWMODEL", "Tasks loaded: ${it.size}") }
+        .onEach { list ->
+            android.util.Log.d("TASK_VM", "Tasks loaded: ${list.size}")
+            list.forEach { task ->
+                val dueDateLocal = task.dueDate?.toLocalDate()
+                android.util.Log.d("TASK_VM", "  - '${task.title}', dueDate millis: ${task.dueDate}, localDate: $dueDateLocal")
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // ── Today's tasks filtered by selected date and category ──
     val todayTasks: StateFlow<List<TaskDomain>> = combine(
         allTasks, _selectedDate, _selectedFilter
     ) { tasks, date, filter ->
+        android.util.Log.d("TASK_VM", "Filtering for date: $date, tasks count: ${tasks.size}")
         tasks.filter { task ->
-            val matchesDate = task.dueDate?.toLocalDate() == date
+            val taskDueDate = task.dueDate?.toLocalDate()
+            val matchesDate = taskDueDate == date
             val matchesFilter = filter == "All" || task.priority == filter
+            android.util.Log.d("TASK_VM", "  Task '${task.title}': dueDate=$taskDueDate, matchesDate=$matchesDate, matchesFilter=$matchesFilter")
             matchesDate && matchesFilter
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -65,7 +74,8 @@ class TaskViewModel(
         allTasks, _selectedDate, _selectedFilter
     ) { tasks, date, filter ->
         tasks.filter { task ->
-            val matchesDate = task.dueDate?.toLocalDate() == date.plusDays(1)
+            val taskDueDate = task.dueDate?.toLocalDate()
+            val matchesDate = taskDueDate == date.plusDays(1)
             val matchesFilter = filter == "All" || task.priority == filter
             matchesDate && matchesFilter
         }
