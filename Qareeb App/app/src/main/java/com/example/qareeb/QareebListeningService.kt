@@ -34,7 +34,7 @@ class QareebListeningService : Service() {
 
     // IMPORTANT: keep your real key here
     private val ACCESS_KEY =
-        "63fsjb728DMV7pIMWuJ6SN1MG7oiR3WkgRJitIN8G2L/Na+Vy6A+Eg=="
+        "8JyKVGnhuojA9vWl/gfyJfOb3HIzPSPV1sjk9MMXAerRbmaNn3/15w=="
 
     // This file should exist in app/src/main/assets/
     private val KEYWORD_ASSET_NAME = "hey-q.ppn"

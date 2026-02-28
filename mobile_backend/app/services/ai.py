@@ -3,6 +3,7 @@ import json
 import uuid
 import logging
 import asyncio
+import time
 from typing import Optional
 
 import whisper
@@ -239,17 +240,32 @@ Only output the intent name.
 
 User request: "{user_input}"
 """
-    completion = groq_client.chat.completions.create(
-        model="moonshotai/kimi-k2-instruct-0905",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        max_completion_tokens=256,
-        top_p=1,
-        stream=False,
-    )
-    intent = completion.choices[0].message.content.strip()
-    logger.info("extract_intent: finished, intent=%s", intent)
-    return intent
+    attempts = 0
+    backoff = 0.6
+    last_err = None
+    while attempts < 3:
+        try:
+            completion = groq_client.chat.completions.create(
+                model="moonshotai/kimi-k2-instruct-0905",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_completion_tokens=256,
+                top_p=1,
+                stream=False,
+            )
+            intent = completion.choices[0].message.content.strip()
+            logger.info("extract_intent: finished, intent=%s", intent)
+            return intent
+        except Exception as e:
+            last_err = e
+            attempts += 1
+            logger.warning(f"extract_intent attempt {attempts} failed: {e}")
+            if attempts >= 3:
+                break
+            time.sleep(backoff)
+            backoff *= 2
+    logger.error(f"extract_intent: giving up after retries, last_err={last_err}")
+    raise last_err
 
 
 def _strip_code_fences(response_text: str) -> str:
