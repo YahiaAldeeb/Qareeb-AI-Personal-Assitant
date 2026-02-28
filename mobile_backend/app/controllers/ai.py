@@ -13,9 +13,10 @@ from app.services.ai import (
     handle_finance_service,
     handle_task_tracker_service,
     UI_AUTOMATION_PROMPT,
-    llm,
+    automation_llm,
     config,
     DroidAgent,
+    AdbToolsManager,
 )
 
 logger = logging.getLogger(__name__)
@@ -132,28 +133,32 @@ async def process_command_controller(file: UploadFile, userID: str, db: Session)
 
         if intent == "UI_AUTOMATION":
             logger.info("process_command_controller: routing to UI_AUTOMATION agent")
-            agent = DroidAgent(
-                goal=f"{UI_AUTOMATION_PROMPT}\n\nTASK:\n{text}",
-                config=config,
-                llms={
-                    "manager": llm,
-                    "executor": llm,
-                    "codeact": llm,
-                    "text_manipulator": llm,
-                    "app_opener": llm,
-                },
-            )
-            result = await agent.run()
-            logger.info(
-                "process_command_controller: UI_AUTOMATION finished success=%s",
-                getattr(result, "success", None),
-            )
-            return {
-                "status": "success",
-                "intent": intent,
-                "transcription": text,
-                "automation_success": result.success,
-            }
+            try:
+                tools = AdbToolsManager.get_tools()
+                await tools.connect()
+                agent = DroidAgent(
+                    goal=f"{UI_AUTOMATION_PROMPT}\n\nTASK:\n{text}",
+                    config=config,
+                    llms=automation_llm,
+                    tools=tools,
+                )
+                result = await agent.run()
+                return {
+                    "status": "success",
+                    "intent": intent,
+                    "transcription": text,
+                    "automation_success": result.success,
+                    "message": getattr(result, "output", "Task completed"),
+                }
+            except Exception as e:
+                logger.exception(f"DroidAgent execution failed: {e}")
+                return {
+                    "status": "error",
+                    "intent": intent,
+                    "transcription": text,
+                    "error": str(e),
+                    "message": "UI automation failed",
+                }
 
         elif intent == "FINANCE":
             # #region agent log

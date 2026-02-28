@@ -8,11 +8,8 @@ import java.util.concurrent.TimeUnit
 
 object NetworkModule {
 
-    // ⚠️ TODO: REPLACE WITH YOUR PC'S IP ADDRESS (Run 'ipconfig' or 'ifconfig')
-    // Example: "http://192.168.1.15:8000/"
-    // Do NOT use localhost.
     private const val BASE_URL = "http://10.0.2.2:8000/"
-
+//    http://10.0.2.2:8000
     private val client = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)) // Logs API details
         .connectTimeout(60, TimeUnit.SECONDS) // Whisper takes time to process!
