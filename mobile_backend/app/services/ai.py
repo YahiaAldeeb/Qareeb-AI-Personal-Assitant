@@ -2,13 +2,20 @@ import os
 import json
 import uuid
 import logging
+import asyncio
+from typing import Optional
 
 import whisper
 from dotenv import load_dotenv
 from groq import Groq
 from llama_index.llms.groq import Groq as LlamaGroq
-from droidrun import AgentConfig, DroidAgent, DroidrunConfig, CodeActConfig
+from droidrun import AgentConfig, DroidAgent, DroidrunConfig, CodeActConfig, AdbTools
 from sqlalchemy.orm import Session
+
+try:
+    import adbutils
+except ImportError:
+    adbutils = None
 
 from app.models.task import TaskRecord
 from app.models.transaction import FinanceRecord
@@ -22,23 +29,142 @@ logger = logging.getLogger(__name__)
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 llm = LlamaGroq(
-    model="openai/gpt-oss-120b",
+    model="moonshotai/kimi-k2-instruct-0905",
     api_key=os.environ.get("GROQ_API_KEY"),
     temperature=0,
 )
 
+# Fast LLM for UI automation using Groq (text-only, no vision needed)
+# DroidRun works great without vision by using UI element descriptions
+automation_llm = LlamaGroq(
+    model="moonshotai/kimi-k2-instruct-0905",
+    api_key=os.environ.get("GROQ_API_KEY"),
+    temperature=0,
+)
+
+# DroidRun configuration optimized for Groq (vision disabled for speed)
 config = DroidrunConfig(
     agent=AgentConfig(
-        after_sleep_action=0.3,
-        wait_for_stable_ui=0.1,
-        codeact=CodeActConfig(vision=False),
+        after_sleep_action=0.5,  # Wait after each action for UI stability
+        wait_for_stable_ui=0.3,  # Wait for UI to stabilize
+        max_steps=20,  # Reduce max steps to avoid context overflow
+        reasoning=False,  # Disable reasoning for faster execution
+        streaming=False,  # Disable streaming in backend
+        codeact=CodeActConfig(
+            vision=False,  # Groq model doesn't support vision, but DroidRun works with UI tree
+        ),
     )
 )
 
+# AdbTools with adbutils-based text input (bypasses Portal 401)
+class AdbToolsWithAdbutilsInput(AdbTools):
+    """Use adbutils for reliable text input via ADB shell."""
+
+    async def input_text(self, text: str, index: int = -1, clear: bool = False) -> str:
+        """
+        Force real text injection (Content Provider mode) with verification.
+        - Focus the element (tap)
+        - Clear existing text (key events)
+        - Inject text via ADB shell (adbutils if available)
+        - Verify the text appears in the latest UI state; fail if not.
+        """
+        await self._ensure_connected()
+        serial = getattr(self.device, "serial", None)
+
+        async def _adb_shell(cmd: str):
+            if adbutils and serial:
+                def _run():
+                    c = adbutils.AdbClient()
+                    d = c.device(serial=serial)
+                    return d.shell(cmd)
+                return await asyncio.get_event_loop().run_in_executor(None, _run)
+            if not getattr(self, "device", None):
+                raise RuntimeError("ADB device not connected")
+            return await self.device.shell(cmd)
+
+        # 1) Focus
+        if index != -1:
+            await self.tap_by_index(index)
+            await asyncio.sleep(0.3)
+
+        # 2) Clear
+        if clear:
+            try:
+                await _adb_shell("input keyevent KEYCODE_MOVE_END")
+                for _ in range(40):
+                    await _adb_shell("input keyevent KEYCODE_DEL")
+                await asyncio.sleep(0.2)
+            except Exception as e:
+                logger.warning(f"input_text clear failed, continuing: {e}")
+
+        # 3) Inject
+        escaped = text.replace(" ", "%s").replace("'", "\\'")
+        try:
+            await _adb_shell(f"input text '{escaped}'")
+        except Exception as e:
+            logger.error(f"input_text adb shell failed: {e}")
+            raise
+
+        # 4) Verify
+        try:
+            state = await self.get_state_full()
+            if isinstance(state, dict) and text and text in json.dumps(state):
+                return f"Typed text via adb shell: {text}"
+            raise RuntimeError("Text not reflected in UI after input_text")
+        except Exception as e:
+            logger.error(f"input_text verification failed: {e}")
+            raise
+
+
+# AdbTools singleton manager
+class AdbToolsManager:
+    """Singleton manager for AdbTools - single device connection."""
+    _instance: Optional[AdbTools] = None
+    _initialized: bool = False
+
+    @classmethod
+    def get_tools(cls) -> AdbTools:
+        """Get or create AdbTools instance for the first connected device."""
+        if cls._instance is None:
+            try:
+                cls._instance = AdbToolsWithAdbutilsInput(
+                    serial=None,
+                    use_tcp=False,
+                    remote_tcp_port=8080,
+                )
+                cls._initialized = True
+                logger.info("AdbTools instance created")
+            except Exception as e:
+                logger.error(f"Failed to create AdbTools: {e}")
+                cls._instance = None
+                cls._initialized = False
+                raise RuntimeError(f"Could not create AdbTools: {e}")
+        return cls._instance
+    
+    @classmethod
+    def is_initialized(cls) -> bool:
+        """Check if AdbTools is initialized."""
+        return cls._initialized
+    
+    @classmethod
+    def reset(cls):
+        """Reset the AdbTools instance (useful for testing or reconnection)."""
+        cls._instance = None
+        cls._initialized = False
+        logger.info("AdbTools reset")
+
 UI_AUTOMATION_PROMPT = """
-Mobile UI agent. Continuous.
-Minimal actions. No explanations.
-Output only actions or FAILED.
+You are a mobile UI automation agent. Execute the task efficiently using minimal steps.
+
+RULES:
+1. Analyze the current screen state
+2. Take direct actions: click(), type(), scroll(), swipe(), open_app()
+3. Complete tasks in the fewest steps possible
+4. If an element is visible, interact with it immediately
+5. Use complete() when task is finished
+6. Use fail() only if task is impossible
+
+Be decisive and fast. No unnecessary explanations.
 """.strip()
 
 try:
@@ -114,12 +240,11 @@ Only output the intent name.
 User request: "{user_input}"
 """
     completion = groq_client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model="moonshotai/kimi-k2-instruct-0905",
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
         max_completion_tokens=256,
         top_p=1,
-        reasoning_effort="medium",
         stream=False,
     )
     intent = completion.choices[0].message.content.strip()
@@ -161,12 +286,11 @@ Output ONLY a valid JSON object matching this schema:
 {json.dumps(schema_json, indent=2)}
 """
     completion = groq_client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model="moonshotai/kimi-k2-instruct-0905",
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
         max_completion_tokens=512,
         top_p=1,
-        reasoning_effort="medium",
         stream=False,
     )
     response_text = completion.choices[0].message.content.strip()
@@ -210,12 +334,11 @@ Output ONLY a valid JSON object matching this schema:
 {json.dumps(schema_json, indent=2)}
 """
     completion = groq_client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model="moonshotai/kimi-k2-instruct-0905",
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
         max_completion_tokens=512,
         top_p=1,
-        reasoning_effort="medium",
         stream=False,
     )
     response_text = completion.choices[0].message.content.strip()
