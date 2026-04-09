@@ -3,6 +3,7 @@ import uuid
 import logging
 import asyncio
 import time
+import json
 from typing import Optional
 
 import whisper
