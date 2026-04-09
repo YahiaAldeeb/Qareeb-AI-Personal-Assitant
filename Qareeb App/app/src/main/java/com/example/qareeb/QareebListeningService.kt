@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -146,10 +147,41 @@ class QareebListeningService : Service() {
         )
         
         val overlay = QareebOverlay(this, sessionManager, syncRepository) {
-            Log.d(TAG, "Overlay closed. Restarting listening...")
+            Log.d(TAG, "Overlay closed. Reinitializing and restarting listening...")
             overlayVisible = false
-            serviceScope.launch(Dispatchers.Default) {
-                startListeningInternal()
+            
+            // Reinitialize Porcupine for next use
+            serviceScope.launch(Dispatchers.IO) {
+                try {
+                    // Clean up old instance
+                    val oldManager = porcupineManager
+                    porcupineManager = null
+                    isInitialized = false
+                    isListening = false
+                    
+                    // Delete and wait for native cleanup
+                    oldManager?.delete()
+                    
+                    // Delay to allow native resource release
+                    delay(500)
+                    
+                    // Reinitialize with fresh callback
+                    initPorcupineInBackground()
+                    isInitialized = true
+                    
+                    // Verify initialization succeeded
+                    delay(200)
+                    if (porcupineManager != null && isInitialized) {
+                        withContext(Dispatchers.Default) {
+                            startListeningInternal()
+                        }
+                        Log.d(TAG, "Porcupine restarted successfully")
+                    } else {
+                        Log.e(TAG, "Porcupine re-initialization failed - manager is null")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to restart listening: ${e.message}", e)
+                }
             }
         }
 
