@@ -1,5 +1,4 @@
 import os
-import json
 import uuid
 import logging
 import asyncio
@@ -12,11 +11,6 @@ from groq import Groq
 from llama_index.llms.groq import Groq as LlamaGroq
 from droidrun import AgentConfig, DroidAgent, DroidrunConfig, CodeActConfig, AdbTools
 from sqlalchemy.orm import Session
-
-try:
-    import adbutils
-except ImportError:
-    adbutils = None
 
 from app.models.task import TaskRecord
 from app.models.transaction import FinanceRecord
@@ -35,124 +29,24 @@ llm = LlamaGroq(
     temperature=0,
 )
 
-# Fast LLM for UI automation using Groq (text-only, no vision needed)
-# DroidRun works great without vision by using UI element descriptions
 automation_llm = LlamaGroq(
     model="moonshotai/kimi-k2-instruct-0905",
     api_key=os.environ.get("GROQ_API_KEY"),
     temperature=0,
 )
 
-# DroidRun configuration optimized for Groq (vision disabled for speed)
 config = DroidrunConfig(
     agent=AgentConfig(
-        after_sleep_action=0.5,  # Wait after each action for UI stability
-        wait_for_stable_ui=0.3,  # Wait for UI to stabilize
-        max_steps=20,  # Reduce max steps to avoid context overflow
-        reasoning=False,  # Disable reasoning for faster execution
-        streaming=False,  # Disable streaming in backend
+        after_sleep_action=0.5,
+        wait_for_stable_ui=0.3,
+        max_steps=20,
+        reasoning=False,
+        streaming=False,
         codeact=CodeActConfig(
-            vision=False,  # Groq model doesn't support vision, but DroidRun works with UI tree
+            vision=False,
         ),
     )
 )
-
-# AdbTools with adbutils-based text input (bypasses Portal 401)
-class AdbToolsWithAdbutilsInput(AdbTools):
-    """Use adbutils for reliable text input via ADB shell."""
-
-    async def input_text(self, text: str, index: int = -1, clear: bool = False) -> str:
-        """
-        Force real text injection (Content Provider mode) with verification.
-        - Focus the element (tap)
-        - Clear existing text (key events)
-        - Inject text via ADB shell (adbutils if available)
-        - Verify the text appears in the latest UI state; fail if not.
-        """
-        await self._ensure_connected()
-        serial = getattr(self.device, "serial", None)
-
-        async def _adb_shell(cmd: str):
-            if adbutils and serial:
-                def _run():
-                    c = adbutils.AdbClient()
-                    d = c.device(serial=serial)
-                    return d.shell(cmd)
-                return await asyncio.get_event_loop().run_in_executor(None, _run)
-            if not getattr(self, "device", None):
-                raise RuntimeError("ADB device not connected")
-            return await self.device.shell(cmd)
-
-        # 1) Focus
-        if index != -1:
-            await self.tap_by_index(index)
-            await asyncio.sleep(0.3)
-
-        # 2) Clear
-        if clear:
-            try:
-                await _adb_shell("input keyevent KEYCODE_MOVE_END")
-                for _ in range(40):
-                    await _adb_shell("input keyevent KEYCODE_DEL")
-                await asyncio.sleep(0.2)
-            except Exception as e:
-                logger.warning(f"input_text clear failed, continuing: {e}")
-
-        # 3) Inject
-        escaped = text.replace(" ", "%s").replace("'", "\\'")
-        try:
-            await _adb_shell(f"input text '{escaped}'")
-        except Exception as e:
-            logger.error(f"input_text adb shell failed: {e}")
-            raise
-
-        # 4) Verify
-        try:
-            state = await self.get_state_full()
-            if isinstance(state, dict) and text and text in json.dumps(state):
-                return f"Typed text via adb shell: {text}"
-            raise RuntimeError("Text not reflected in UI after input_text")
-        except Exception as e:
-            logger.error(f"input_text verification failed: {e}")
-            raise
-
-
-# AdbTools singleton manager
-class AdbToolsManager:
-    """Singleton manager for AdbTools - single device connection."""
-    _instance: Optional[AdbTools] = None
-    _initialized: bool = False
-
-    @classmethod
-    def get_tools(cls) -> AdbTools:
-        """Get or create AdbTools instance for the first connected device."""
-        if cls._instance is None:
-            try:
-                cls._instance = AdbToolsWithAdbutilsInput(
-                    serial=None,
-                    use_tcp=False,
-                    remote_tcp_port=8080,
-                )
-                cls._initialized = True
-                logger.info("AdbTools instance created")
-            except Exception as e:
-                logger.error(f"Failed to create AdbTools: {e}")
-                cls._instance = None
-                cls._initialized = False
-                raise RuntimeError(f"Could not create AdbTools: {e}")
-        return cls._instance
-    
-    @classmethod
-    def is_initialized(cls) -> bool:
-        """Check if AdbTools is initialized."""
-        return cls._initialized
-    
-    @classmethod
-    def reset(cls):
-        """Reset the AdbTools instance (useful for testing or reconnection)."""
-        cls._instance = None
-        cls._initialized = False
-        logger.info("AdbTools reset")
 
 UI_AUTOMATION_PROMPT = """
 You are a mobile UI automation agent. Execute the task efficiently using minimal steps.
@@ -177,52 +71,14 @@ except Exception as e:
 
 
 def transcribe(audio_path: str) -> str:
-    import json
-    from pathlib import Path
-    
-    DEBUG_LOG_PATH = Path(r"e:\Graduation project\Qareeb-AI-Personal-Assitant\.cursor\debug.log")
-    
-    def _write_debug_log(location: str, message: str, data: dict, hypothesis_id: str = None):
-        try:
-            log_entry = {
-                "id": f"log_{int(__import__('time').time() * 1000)}",
-                "timestamp": int(__import__('time').time() * 1000),
-                "location": location,
-                "message": message,
-                "data": data,
-                "runId": "debug_run"
-            }
-            if hypothesis_id:
-                log_entry["hypothesisId"] = hypothesis_id
-            
-            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_entry) + "\n")
-        except Exception as e:
-            logger.error(f"Failed to write debug log: {e}")
-    
-    # #region agent log
-    _write_debug_log("ai.py:52", "transcribe: ENTRY", {"audio_path": audio_path, "file_exists": os.path.exists(audio_path), "whisper_model_loaded": whisper_model is not None}, "D")
-    # #endregion
-    
     logger.info("transcribe: starting, audio_path=%s", audio_path)
     if not whisper_model:
-        # #region agent log
-        _write_debug_log("ai.py:56", "transcribe: Whisper model NOT loaded", {}, "D")
-        # #endregion
         logger.error("transcribe: Whisper model not loaded")
         raise RuntimeError("Whisper model not loaded")
-    
-    # #region agent log
-    _write_debug_log("ai.py:61", "transcribe: BEFORE whisper.transcribe", {"audio_path": audio_path, "file_size": os.path.getsize(audio_path) if os.path.exists(audio_path) else 0}, "D")
-    # #endregion
-    
+
     result = whisper_model.transcribe(audio_path, fp16=False, language="en")
     text = result["text"].strip()
-    
-    # #region agent log
-    _write_debug_log("ai.py:65", "transcribe: AFTER whisper.transcribe", {"text": text, "text_length": len(text)}, "D")
-    # #endregion
-    
+
     logger.info("transcribe: finished, text=%r", text)
     return text
 
@@ -316,7 +172,9 @@ Output ONLY a valid JSON object matching this schema:
     try:
         data = json.loads(response_text)
     except json.JSONDecodeError as e:
-        logger.exception("extract_finance_data: JSON decode error, text=%r", response_text)
+        logger.exception(
+            "extract_finance_data: JSON decode error, text=%r", response_text
+        )
         raise
 
     validated = FinanceRecord(**data)
@@ -374,19 +232,21 @@ Output ONLY a valid JSON object matching this schema:
 
 
 async def handle_finance_service(text: str, userID: str, db: Session) -> dict:
-    logger.info("handle_finance_service: starting with text=%r, userID=%s", text, userID)
-    
+    logger.info(
+        "handle_finance_service: starting with text=%r, userID=%s", text, userID
+    )
+
     if not userID or not userID.strip():
         logger.error("handle_finance_service: userID is required but was empty")
         return {"success": False, "error": "userID is required"}
-    
+
     try:
         finance_data = extract_finance_data(text)
 
         # Ensure transactionID is set if missing, but use provided userID
         if not finance_data.get("transactionID"):
             finance_data["transactionID"] = str(uuid.uuid4())
-        
+
         # Use the provided userID from the mobile app
         finance_data["userID"] = userID.strip()
 
@@ -403,19 +263,21 @@ async def handle_finance_service(text: str, userID: str, db: Session) -> dict:
 
 
 async def handle_task_tracker_service(text: str, userID: str, db: Session) -> dict:
-    logger.info("handle_task_tracker_service: starting with text=%r, userID=%s", text, userID)
-    
+    logger.info(
+        "handle_task_tracker_service: starting with text=%r, userID=%s", text, userID
+    )
+
     if not userID or not userID.strip():
         logger.error("handle_task_tracker_service: userID is required but was empty")
         return {"success": False, "error": "userID is required"}
-    
+
     try:
         task_data = extract_task_data(text)
 
         # Ensure taskID is set if missing, but use provided userID
         if not task_data.get("taskID"):
             task_data["taskID"] = str(uuid.uuid4())
-        
+
         # Use the provided userID from the mobile app
         task_data["userID"] = userID.strip()
 
