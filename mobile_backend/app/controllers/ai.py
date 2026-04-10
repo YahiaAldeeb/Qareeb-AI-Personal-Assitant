@@ -242,3 +242,95 @@ async def process_command_controller(file: UploadFile, userID: str, db: Session)
                     "process_command_controller: failed to remove temp_audio=%s",
                     temp_audio,
                 )
+
+
+async def process_text_controller(text: str, userID: str, db: Session):
+    """
+    Text-based AI workflow (no transcription needed):
+    - intent classification
+    - route to UI automation / finance / task tracker
+    """
+    logger.info("process_text_controller: started, text=%r, userID=%s", text, userID)
+
+    if not userID or not userID.strip():
+        return {"status": "error", "message": "userID is required"}
+
+    try:
+        logger.info("process_text_controller: extracting intent")
+        intent = extract_intent(text)
+
+        logger.info("process_text_controller: extracted intent=%s", intent)
+
+        if intent == "UI_AUTOMATION":
+            logger.info("process_text_controller: routing to UI_AUTOMATION via CLI")
+            job_id = str(uuid.uuid4())
+
+            future = executor.submit(run_droidrun_sync, text)
+
+            automation_jobs[job_id] = {
+                "status": "running",
+                "command": text,
+                "started_at": datetime.now().isoformat(),
+                "future": future,
+            }
+
+            return {
+                "status": "accepted",
+                "intent": intent,
+                "text": text,
+                "job_id": job_id,
+            }
+
+        elif intent == "FINANCE":
+            logger.info(
+                "process_text_controller: routing to FINANCE service with text=%r, userID=%s",
+                text,
+                userID,
+            )
+            result = await handle_finance_service(text, userID, db)
+
+            logger.info(
+                "process_text_controller: FINANCE service result success=%s",
+                result.get("success"),
+            )
+            return {
+                "status": "success" if result.get("success") else "error",
+                "intent": intent,
+                "text": text,
+                "result": result,
+            }
+
+        elif intent == "TASK_TRACKER":
+            logger.info(
+                "process_text_controller: routing to TASK_TRACKER service with text=%r, userID=%s",
+                text,
+                userID,
+            )
+            result = await handle_task_tracker_service(text, userID, db)
+
+            logger.info(
+                "process_text_controller: TASK_TRACKER service result success=%s",
+                result.get("success"),
+            )
+            return {
+                "status": "success" if result.get("success") else "error",
+                "intent": intent,
+                "text": text,
+                "result": result,
+            }
+
+        else:
+            logger.warning(
+                "process_text_controller: unknown intent=%s, text=%r",
+                intent,
+                text,
+            )
+            return {"status": "unknown_intent", "intent": intent, "text": text}
+
+    except Exception as e:
+        logger.exception("process_text_controller: unexpected error")
+        return {
+            "status": "error",
+            "message": str(e),
+            "stage": "process_text_controller",
+        }

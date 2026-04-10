@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.qareeb.data.AppDatabase
 import com.example.qareeb.data.remote.RetrofitInstance
 import com.example.qareeb.data.remote.SyncRepository
+import com.example.qareeb.data.repositoryImp.CategoryRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
         // Repos for UI
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
+        val categoryRepo = CategoryRepositoryImpl(db.categoryDao())
         val userRepo = UserRepositoryImpl(db.userDao())
 
         // Sync repository
@@ -119,9 +121,11 @@ class MainActivity : ComponentActivity() {
                 sessionManager = sessionManager,
                 taskRepo = taskRepo,
                 financeRepo = financeRepo,
+                categoryRepo = categoryRepo,
                 syncRepository = syncRepository,
                 userRepository = userRepo,
-                onStartQareeb = { checkPermissionsAndStart() } // called from ChatBotScreen switch
+                db = db,
+                onStartQareeb = { checkPermissionsAndStart() }
             )
         }
     }

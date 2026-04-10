@@ -37,4 +37,12 @@ class TransactionRepositoryImpl(private val transactionDao: TransactionDao) : Tr
             list.map { it.toDomain() }
         }
     }
+
+    override suspend fun updateTransactionCategoryId(transactionId: String, categoryId: String) {
+        transactionDao.updateCategoryId(transactionId, categoryId)
+    }
+
+    override suspend fun getUncategorizedTransactions(userId: String): List<TransactionDomain> {
+        return transactionDao.getUncategorizedTransactions(userId).map { it.toDomain() }
+    }
 }
