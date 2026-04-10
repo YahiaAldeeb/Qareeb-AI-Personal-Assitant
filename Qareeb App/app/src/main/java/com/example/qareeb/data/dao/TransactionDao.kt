@@ -43,4 +43,10 @@ interface TransactionDao {
 
     @Query("SELECT * FROM `transaction` WHERE userID = :userId AND state = :state AND is_deleted = 0")
     fun getTransactionsByState(userId: String, state: TransactionState): Flow<List<Transaction>>
+
+    @Query("UPDATE `transaction` SET category_id = :categoryId WHERE transaction_id = :transactionId")
+    suspend fun updateCategoryId(transactionId: String, categoryId: String)
+
+    @Query("SELECT * FROM `transaction` WHERE userID = :userId AND category_id IS NULL AND is_deleted = 0")
+    suspend fun getUncategorizedTransactions(userId: String): List<Transaction>
 }

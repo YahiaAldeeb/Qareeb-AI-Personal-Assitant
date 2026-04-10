@@ -1,11 +1,42 @@
 import logging
 from fastapi import APIRouter, File, UploadFile, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.database import get_db
-from app.controllers.ai import process_command_controller, automation_jobs
+from app.controllers.ai import (
+    process_command_controller,
+    process_text_controller,
+    automation_jobs,
+)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 logger = logging.getLogger(__name__)
+
+
+class TextMessageRequest(BaseModel):
+    text: str
+    userID: str
+
+
+@router.post("/text")
+async def process_text_message(
+    request: TextMessageRequest, db: Session = Depends(get_db)
+):
+    logger.info(
+        f"POST /api/ai/text - text={request.text[:50]}..., userID={request.userID}"
+    )
+
+    if not request.userID or not request.userID.strip():
+        raise HTTPException(status_code=400, detail="userID is required")
+
+    if not request.text or not request.text.strip():
+        raise HTTPException(status_code=400, detail="text is required")
+
+    result = await process_text_controller(
+        request.text.strip(), request.userID.strip(), db
+    )
+
+    return result
 
 
 @router.post("/transcribe")

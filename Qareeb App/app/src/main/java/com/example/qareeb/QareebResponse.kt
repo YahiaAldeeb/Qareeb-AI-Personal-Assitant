@@ -12,8 +12,14 @@ data class QareebResponse(
     @SerializedName("transcription")
     val transcription: String? = null,
     
+    @SerializedName("text")
+    val text: String? = null,
+    
     @SerializedName("result")
-    val result: ResultData? = null
+    val result: ResultData? = null,
+    
+    @SerializedName("job_id")
+    val jobId: String? = null
 )
 
 data class ResultData(

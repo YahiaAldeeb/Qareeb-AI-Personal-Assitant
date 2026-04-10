@@ -9,6 +9,9 @@ interface CategoryDao {
     @Query("SELECT * FROM category")
     fun getAllCategories(): Flow<List<Category>>
 
+    @Query("SELECT * FROM category WHERE name = :name LIMIT 1")
+    suspend fun getCategoryByName(name: String): Category?
+
     @Insert
     suspend fun insertCategory(category: Category): Long
 
