@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Body, Depends
 from sqlalchemy.orm import Session
+from fastapi import UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from app.database import get_db
-from app.models.user import LoginRequest, RegisterRequest
+from app.models.user import LoginRequest, RegisterRequest,RegisterVoiceRequest
 from app.controllers.user import (
     list_users_controller,
     create_user_controller,
@@ -12,6 +14,7 @@ from app.controllers.user import (
     delete_user_controller,
     get_user_tasks_controller,
     get_user_transactions_controller,
+    register_voice_controller
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -31,6 +34,15 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/register")
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     return register_controller(payload, db)
+
+@router.post("/VoiceRegister/{userID}")
+async def VoiceRegister(
+    userID: str,
+    wav_file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    return await register_voice_controller(userID, wav_file, db)
+
 
 @router.get("/{userID}")
 def get_user(userID: int, db: Session = Depends(get_db)):

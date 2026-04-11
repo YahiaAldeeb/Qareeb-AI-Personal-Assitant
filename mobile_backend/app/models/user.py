@@ -1,3 +1,5 @@
+from sqlite3 import Blob
+
 from pydantic import BaseModel
 
 class LoginRequest(BaseModel):
@@ -9,3 +11,11 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     phoneNumber: str
+    
+
+
+
+class RegisterVoiceRequest(BaseModel):
+        userID: str
+        wav_path: str
+       

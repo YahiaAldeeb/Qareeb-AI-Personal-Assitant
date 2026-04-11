@@ -3,6 +3,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .base import insert_row, update_row, delete_row
+from app.services.voice import get_embedding_for_storage
 
 USER_COLUMNS = "id, created_at, name, email, last_login"
 
@@ -69,4 +70,27 @@ def register_service(db: Session, name: str, email: str, password: str):
         "userID": new_userID,
         "name": name,
         "email": email
+    }
+
+def register_voice_service(db: Session, userID: str, wav_path: str):
+    voice_embedding = get_embedding_for_storage(wav_path)
+
+    try:
+        db.execute(
+            text('''
+                UPDATE "User" SET voice_embedding = :voice_embedding
+                WHERE "userID" = :userID
+            '''),
+            {
+                "userID": userID,
+                "voice_embedding": voice_embedding
+            }
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return {
+        "voice_embedding": base64.b64encode(voice_embedding).decode("utf-8")
     }

@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.models.user import LoginRequest, RegisterRequest
+from app.models.user import LoginRequest, RegisterRequest,RegisterVoiceRequest
+import tempfile, os
 from app.services.user import (
     get_users_service,
     create_user_service,
@@ -9,6 +10,7 @@ from app.services.user import (
     delete_user_service,
     login_service,
     register_service,
+    register_voice_service
 )
 from app.services.task import get_tasks_by_userID_service
 from app.services.transaction import get_transactions_by_userID_service
@@ -40,6 +42,22 @@ def register_controller(payload: RegisterRequest, db: Session):
     except Exception as e:
         print(f"[REGISTER] Error: {e}")
         raise HTTPException(status_code=500, detail="Registration failed")
+    
+async def register_voice_controller(userID: str, wav_file: UploadFile, db: Session):
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            content = await wav_file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+        try:
+            return register_voice_service(db, userID, tmp_path)
+        finally:
+            os.remove(tmp_path)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        print(f"[VOICE REGISTER] Error: {e}")
+        raise HTTPException(status_code=500, detail="Voice Registration failed")
 
 def get_user_controller(userID: int, db: Session):
     user = get_user_by_id_service(db, userID)
