@@ -7,5 +7,5 @@ data class UserDomain(
     val password: String,
     val createdAt: Long = System.currentTimeMillis(),
     val lastLogin: Long? = null,
-    val voiceEmbedding: String? = null
+    val voiceEmbedding: ByteArray? = null
 )

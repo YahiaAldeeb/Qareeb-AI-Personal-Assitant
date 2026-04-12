@@ -9,4 +9,5 @@ interface UserRepository {
     suspend fun insertUser(User: UserDomain): Long
     suspend fun updateUser(User: UserDomain)
     suspend fun deleteUser(User: UserDomain)
+    suspend fun updateVoice(User: UserDomain, voiceEmbedding: ByteArray)
 }

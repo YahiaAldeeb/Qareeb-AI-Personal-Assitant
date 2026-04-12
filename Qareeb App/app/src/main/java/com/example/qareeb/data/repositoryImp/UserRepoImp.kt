@@ -27,4 +27,9 @@ class UserRepositoryImpl(private val userDao: UserDao) : UserRepository {
     override suspend fun deleteUser(user: UserDomain) {
         userDao.deleteUser(user.toEntity())
     }
+
+    override suspend fun updateVoice(User: UserDomain, voiceEmbedding: ByteArray) {
+        userDao.updateVoiceEmbedding(User.userId, embedding = voiceEmbedding)
+    }
+
 }
