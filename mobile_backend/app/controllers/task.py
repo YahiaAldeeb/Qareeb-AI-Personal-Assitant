@@ -17,13 +17,13 @@ def create_task_controller(payload: dict, db: Session):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-def get_task_controller(task_id: int, db: Session):
+def get_task_controller(task_id: str, db: Session):
     task = get_task_by_id_service(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"task": task}
 
-def update_task_controller(task_id: int, payload: dict, db: Session):
+def update_task_controller(task_id: str, payload: dict, db: Session):
     try:
         task = update_task_service(db, task_id, payload)
     except ValueError as exc:
@@ -32,7 +32,7 @@ def update_task_controller(task_id: int, payload: dict, db: Session):
         raise HTTPException(status_code=404, detail="Task not found")
     return {"task": task}
 
-def delete_task_controller(task_id: int, db: Session):
+def delete_task_controller(task_id: str, db: Session):
     task = delete_task_service(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
