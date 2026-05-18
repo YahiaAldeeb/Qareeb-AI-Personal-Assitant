@@ -6,18 +6,24 @@ import androidx.lifecycle.viewModelScope
 import com.example.qareeb.NetworkModule
 import com.example.qareeb.QareebResponse
 import com.example.qareeb.TextMessageRequest
+import com.example.qareeb.data.dao.MemoryDao
+import com.example.qareeb.data.dao.PromptDao
 import com.example.qareeb.data.dao.TaskDao
 import com.example.qareeb.data.dao.TransactionDao
+import com.example.qareeb.data.entity.Memory
+import com.example.qareeb.data.entity.Prompt
 import com.example.qareeb.data.entity.Task
 import com.example.qareeb.data.entity.Transaction
 import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.domain.model.enums.TaskStatus
 import com.example.qareeb.domain.model.enums.TransactionState
 import com.example.qareeb.presentation.utilis.SessionManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -39,6 +45,8 @@ data class ChatMessage(
 class ChatBotViewModel(
     private val transactionDao: TransactionDao,
     private val taskDao: TaskDao,
+    private val promptDao: PromptDao,   // ← add
+    private val memoryDao: MemoryDao,   // ← add
     private val sessionManager: SessionManager,
     private val syncRepository: SyncRepository
 ) : ViewModel() {
@@ -72,19 +80,86 @@ class ChatBotViewModel(
 
         viewModelScope.launch {
             try {
+                // 1. Load short-term memory (last 10 prompts)
+                val recentPrompts = promptDao.getRecentPrompts(userId, 10)
+                    .reversed() // oldest first
+                    .joinToString("\n") { "User: ${it.userMessage}\nQareeb: ${it.qareebResponse}" }
+
+                // 2. Load long-term memory (all facts)
+                val memories = memoryDao.getAllMemories(userId)
+                    .joinToString("\n") { "- ${it.fact}" }
+
+                // 3. Build enriched text with context
+                val enrichedText = buildString {
+                    if (memories.isNotEmpty()) {
+                        append("[User habits and preferences:\n$memories]\n\n")
+                    }
+                    if (recentPrompts.isNotEmpty()) {
+                        append("[Recent conversation:\n$recentPrompts]\n\n")
+                    }
+                    append(text)
+                }
+
                 val response = NetworkModule.api.sendTextMessage(
-                    TextMessageRequest(text = text, userID = userId)
+                    TextMessageRequest(text = enrichedText, userID = userId)
                 )
+
+                // 4. Save this turn to local prompt history
+                val botReply = extractBotReply(response)
+                promptDao.insertPrompt(
+                    Prompt(
+                        userId = userId,
+                        userMessage = text, // save original, not enriched
+                        qareebResponse = botReply,
+                        promptType = "TEXT",
+                        module = "CHATBOT",
+                        intentDetected = response.intent
+                    )
+                )
+
+                // 5. Extract and save long-term memory fact if useful
+                extractAndSaveMemory(text, botReply)
 
                 handleResponse(response)
             } catch (e: Exception) {
-                _uiState.value = ChatUiState.Error("Failed to send message: ${e.message}")
-                // Add error bot response
-                addBotMessage("Sorry, I couldn't process your request. Please try again.")
+                _uiState.value = ChatUiState.Error("Failed: ${e.message}")
+                addBotMessage("Sorry, I couldn't process that. Please try again.")
             }
         }
     }
+    private fun extractBotReply(response: QareebResponse): String {
+        return when (response.intent) {
+            "TASK_TRACKER" -> "Created task: ${response.result?.data?.task?.title}"
+            "FINANCE" -> "Recorded transaction of ${response.result?.data?.transaction?.amount}"
+            else -> response.status
+        }
+    }
+    private suspend fun extractAndSaveMemory(userText: String, botReply: String) {
+        // Simple rule-based extraction — no extra LLM call needed
+        val lower = userText.lowercase()
+        val fact: String? = when {
+            lower.contains("every monday")||lower.contains("on mondays") ->
+                "User has a recurring activity on Mondays"
+            lower.contains("every morning") ->
+                "User prefers morning routines"
+            lower.contains("every evening") ||lower.contains("every night") ->
+                "User prefers evening routines"
+            lower.contains("i always") ->
+                "User habit: $userText"
+            lower.contains("i usually") ->
+                "User usually: ${userText.replace("i usually", "").trim()}"
+            lower.contains("i prefer") ->
+                "User preference: ${userText.replace("i prefer", "").trim()}"
+            else -> null
+        }
 
+        fact?.let {
+            memoryDao.deleteByKeyPattern(userId, "%${it.take(20)}%")
+            memoryDao.insertMemory(
+                Memory(userId = userId, fact = it)
+            )
+        }
+    }
     private fun handleResponse(response: QareebResponse) {
         viewModelScope.launch {
             try {
@@ -113,6 +188,12 @@ class ChatBotViewModel(
                                 if (taskData != null) {
                                     val task = parseTaskFromResponse(taskData, userId)
                                     taskDao.upsertTask(task)
+                                    try {
+                                        withContext(Dispatchers.IO) {     syncRepository.sync(userId) }
+
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("CHATBOT", "Sync pull failed: ${e.message}")
+                                    }
                                     val title = taskData.title ?: "task"
                                     _uiState.value = ChatUiState.Success("Created task: $title ✅")
                                     addBotMessage("Created task: $title ✅")
@@ -204,7 +285,7 @@ class ChatBotViewModel(
         taskData: com.example.qareeb.TaskResponse,
         userId: String
     ): Task {
-        val dueDateMillis = taskData.dueDate?.let { dueDateStr ->
+        val dueDateMillis: Long? = taskData.dueDate?.let { dueDateStr ->
             try {
                 try {
                     OffsetDateTime.parse(dueDateStr).toInstant().toEpochMilli()
@@ -219,16 +300,8 @@ class ChatBotViewModel(
                     }
                 }
             } catch (e: Exception) {
-                java.time.LocalDate.now()
-                    .atStartOfDay(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
+                null
             }
-        } ?: run {
-            java.time.LocalDate.now()
-                .atStartOfDay(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli()
         }
 
         val status = try {
@@ -259,6 +332,8 @@ class ChatBotViewModel(
 class ChatBotViewModelFactory(
     private val transactionDao: TransactionDao,
     private val taskDao: TaskDao,
+    private val promptDao: PromptDao,     // ✅ add this
+    private val memoryDao: MemoryDao,     // ✅ add this
     private val sessionManager: SessionManager,
     private val syncRepository: SyncRepository
 ) : ViewModelProvider.Factory {
@@ -266,6 +341,8 @@ class ChatBotViewModelFactory(
         return ChatBotViewModel(
             transactionDao,
             taskDao,
+            promptDao,        // ✅ pass it
+            memoryDao,        // ✅ pass it
             sessionManager,
             syncRepository
         ) as T

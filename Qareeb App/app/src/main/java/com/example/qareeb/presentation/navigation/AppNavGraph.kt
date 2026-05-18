@@ -60,6 +60,7 @@ object Routes {
     const val PROFILE = "profile"
 }
 
+// ✅ MainScaffold — now has onLoginSuccess
 @Composable
 fun MainScaffold(
     sessionManager: SessionManager,
@@ -69,7 +70,8 @@ fun MainScaffold(
     userRepository: UserRepository,
     syncRepository: SyncRepository,
     db: AppDatabase,
-    onStartQareeb: () -> Unit
+    onStartQareeb: () -> Unit,
+    onLoginSuccess: () -> Unit = {}  // ✅ added
 ) {
     val navController = rememberNavController()
 
@@ -82,7 +84,8 @@ fun MainScaffold(
         syncRepository = syncRepository,
         userRepository = userRepository,
         db = db,
-        onStartQareeb = onStartQareeb
+        onStartQareeb = onStartQareeb,
+        onLoginSuccess = onLoginSuccess  // ✅ passed down
     )
 }
 
@@ -96,7 +99,8 @@ fun AppNavGraph(
     syncRepository: SyncRepository,
     userRepository: UserRepository,
     db: AppDatabase,
-    onStartQareeb: () -> Unit
+    onStartQareeb: () -> Unit,
+    onLoginSuccess: () -> Unit = {}  // ✅ added
 ) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
@@ -162,6 +166,7 @@ fun AppNavGraph(
                 LoginScreen(
                     viewModel = vm,
                     onLoginSuccess = {
+                        onLoginSuccess()  // ✅ register FCM token after login
                         navController.navigate(Routes.DASHBOARD) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
@@ -181,6 +186,7 @@ fun AppNavGraph(
                 SignUpScreen(
                     viewModel = vm,
                     onSignUpSuccess = {
+                        onLoginSuccess()  // ✅ also register FCM token after signup
                         navController.navigate(Routes.SPLASH) {
                             popUpTo(Routes.REGISTER) { inclusive = true }
                         }
@@ -248,6 +254,8 @@ fun AppNavGraph(
                         factory = ChatBotViewModelFactory(
                             transactionDao = db.transactionDao(),
                             taskDao = db.taskDao(),
+                            promptDao = db.promptDao(),
+                            memoryDao = db.memoryDao(),
                             sessionManager = sessionManager,
                             syncRepository = syncRepository
                         )

@@ -144,5 +144,7 @@ dependencies {
 
     // Charts - Vico
     implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
-
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.google.firebase:firebase-messaging")
+    //implementation("com.google.firebase:firebase-messaging")
 }

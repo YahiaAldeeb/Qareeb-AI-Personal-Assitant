@@ -15,13 +15,16 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.qareeb.data.AppDatabase
 import com.example.qareeb.data.remote.RetrofitInstance
+import com.example.qareeb.data.remote.SyncApi
 import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.CategoryRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
-import com.example.qareeb.presentation.MainScaffold
+import com.example.qareeb.presentation.navigation.MainScaffold
 import com.example.qareeb.presentation.utilis.SessionManager
+import com.google.firebase.FirebaseApp
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,15 +33,12 @@ class MainActivity : ComponentActivity() {
 
     private val TAG = "QAREEB_DEBUG"
 
-    // Activity-level deps (accessible from permission callbacks)
     private lateinit var db: AppDatabase
     private lateinit var sessionManager: SessionManager
     private lateinit var syncRepository: SyncRepository
 
-    // Used to continue starting Qareeb after user grants overlay permission in Settings
     private var pendingStartAfterOverlay = false
 
-    // 1) Overlay Permission launcher (Settings screen)
     private val overlayPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (pendingStartAfterOverlay) {
@@ -47,43 +47,49 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-    // 2) Runtime Permissions launcher (Mic + Notifications)
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             val allGranted = permissions.entries.all { it.value }
             if (allGranted) {
                 startQareebService()
-                // Optional: minimize app
-                // moveTaskToBack(true)
             } else {
                 Log.w(TAG, "Permissions denied: $permissions")
             }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ✅ splashscreen MUST be before super.onCreate
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Init DB + session
+        // ✅ Firebase FIRST before anything Firebase-related
+        //FirebaseApp.initializeApp(this)
+
+        // Init DB + Session
         db = AppDatabase.getDatabase(this)
         sessionManager = SessionManager.getInstance(this)
 
-        // Repos for UI
+        // Repositories
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
         val categoryRepo = CategoryRepositoryImpl(db.categoryDao())
         val userRepo = UserRepositoryImpl(db.userDao())
 
-        // Sync repository
+        // Sync Repository
         syncRepository = SyncRepository(
             taskDao = db.taskDao(),
             userDao = db.userDao(),
             transactionDao = db.transactionDao(),
-            api = RetrofitInstance.syncApi, // must exist in your RetrofitInstance
+            promptDao = db.promptDao(),
+            memoryDao = db.memoryDao(),
+            api = RetrofitInstance.syncApi,
             prefs = getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
         )
 
-        // Sync on app start if already logged in (only if missing local data)
+        // ✅ Register FCM token if user already logged in
+        registerFcmToken()
+
+        // Sync on app start
         lifecycleScope.launch {
             val userId = sessionManager.getUserId()
             if (!userId.isNullOrEmpty()) {
@@ -93,29 +99,21 @@ class MainActivity : ComponentActivity() {
                 val localTransactions = withContext(Dispatchers.IO) {
                     db.transactionDao().getTransactionsByUserOneShot(userId)
                 }
-
                 if (localTasks.isEmpty() || localTransactions.isEmpty()) {
-                    Log.d(
-                        "SYNC",
-                        "Missing data → tasks: ${localTasks.size}, transactions: ${localTransactions.size}, syncing..."
-                    )
+                    Log.d("SYNC", "Missing data → syncing...")
                     try {
                         withContext(Dispatchers.IO) { syncRepository.sync(userId) }
                     } catch (e: Exception) {
                         Log.e("SYNC", "Sync failed: ${e.message}", e)
                     }
                 } else {
-                    Log.d(
-                        "SYNC",
-                        "All data present → tasks: ${localTasks.size}, transactions: ${localTransactions.size}, skipping sync"
-                    )
+                    Log.d("SYNC", "All data present → skipping sync")
                 }
             } else {
                 Log.d("SYNC", "No user logged in, skipping sync")
             }
         }
 
-        // ✅ Compose entry point
         setContent {
             MainScaffold(
                 sessionManager = sessionManager,
@@ -125,17 +123,49 @@ class MainActivity : ComponentActivity() {
                 syncRepository = syncRepository,
                 userRepository = userRepo,
                 db = db,
-                onStartQareeb = { checkPermissionsAndStart() }
+                onStartQareeb = { checkPermissionsAndStart() },
+                onLoginSuccess = { registerFcmToken() }
             )
         }
     }
 
-    /**
-     * Called when user toggles "Enable Qareeb Voice Assistant" ON.
-     * Handles overlay permission -> runtime permissions -> starts foreground service.
-     */
+    private fun registerFcmToken() {
+        val userId = sessionManager.getUserId()
+        if (userId.isNullOrEmpty()) {
+            Log.d("FCM", "No user logged in, skipping token registration")
+            return
+        }
+
+        try {
+            FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val token = task.result
+                        Log.d("FCM_TOKEN", "Token: $token")
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                RetrofitInstance.syncApi.registerFcmToken(
+                                    SyncApi.FCMTokenRequest(
+                                        userID = userId,
+                                        fcm_token = token
+                                    )
+                                )
+                                Log.d("FCM", "Token sent successfully")
+                            } catch (e: Exception) {
+                                Log.e("FCM", "Failed to send token: ${e.message}", e)
+                            }
+                        }
+                    } else {
+                        Log.e("FCM", "Fetching FCM token failed", task.exception)
+                    }
+                }
+        } catch (e: Exception) {
+            // ✅ Won't crash the app if Firebase isn't ready
+            Log.e("FCM", "Firebase not ready: ${e.message}", e)
+        }
+    }
+
     private fun checkPermissionsAndStart() {
-        // 1) Overlay permission
         if (!Settings.canDrawOverlays(this)) {
             pendingStartAfterOverlay = true
             val intent = Intent(
@@ -146,18 +176,13 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // 2) Runtime permissions: RECORD_AUDIO + (Android 13+) POST_NOTIFICATIONS
         val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= 33) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-
         requestPermissionLauncher.launch(perms.toTypedArray())
     }
 
-    /**
-     * Starts the listening foreground service.
-     */
     private fun startQareebService() {
         val intent = Intent(this, QareebListeningService::class.java)
         if (Build.VERSION.SDK_INT >= 26) {

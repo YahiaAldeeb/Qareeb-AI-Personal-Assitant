@@ -20,7 +20,8 @@ fun MainScaffold(
     userRepository: UserRepository,
     syncRepository: SyncRepository,
     db: AppDatabase,
-    onStartQareeb: () -> Unit
+    onStartQareeb: () -> Unit,
+    onLoginSuccess: () -> Unit = {}  // ✅ add this
 ) {
     val navController = rememberNavController()
 
@@ -33,6 +34,7 @@ fun MainScaffold(
         syncRepository = syncRepository,
         userRepository = userRepository,
         db = db,
-        onStartQareeb = onStartQareeb
+        onStartQareeb = onStartQareeb,
+        onLoginSuccess = onLoginSuccess  // ✅ add this
     )
 }
