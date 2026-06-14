@@ -8,73 +8,148 @@ logger = logging.getLogger(__name__)
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
-def get_upcoming_suggestions(db: Session, userID: str, memories: list[str]) -> str | None:
+def get_upcoming_suggestions(
+    db: Session,
+    userID: str,
+    memories: list[str]
+) -> list[str]:
     """
     Look at user memories and today's date.
-    If a recurring event is coming up tomorrow, return a suggestion message.
-    Returns None if no suggestion needed.
+    If recurring events are coming up tomorrow,
+    return a list of suggestion messages.
+
+    Example return:
+    [
+        "You have gym tomorrow (Monday) — want me to add it to your tasks?",
+        "You have swimming tomorrow (Monday) — want me to add it to your tasks?"
+    ]
+
+    Returns [] if no suggestions needed.
     """
+
     if not memories:
-        return None
+        logger.info(
+            "get_upcoming_suggestions: no memories for userID=%s",
+            userID
+        )
+        return []
 
     today = datetime.now()
     tomorrow = today + timedelta(days=1)
-    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    tomorrow_name = day_names[tomorrow.weekday()]
+
+    day_names = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+
     today_name = day_names[today.weekday()]
+    tomorrow_name = day_names[tomorrow.weekday()]
     tomorrow_date = tomorrow.strftime("%Y-%m-%d")
+
+    logger.info(
+        "get_upcoming_suggestions: today=%s (%s), tomorrow=%s (%s)",
+        today.strftime("%Y-%m-%d"),
+        today_name,
+        tomorrow_date,
+        tomorrow_name,
+    )
 
     memories_str = "\n".join(f"- {m}" for m in memories)
 
     prompt = f"""
-You are Qareeb, a proactive personal AI assistant.
-
 Today is {today_name}, {today.strftime("%Y-%m-%d")}.
 Tomorrow is {tomorrow_name}, {tomorrow_date}.
 
-User's known recurring schedule and preferences:
+User memories:
 {memories_str}
 
-Your job: Check if any recurring event from the user's memory is happening TOMORROW.
-
-If YES → write a short friendly suggestion message asking if they want you to create it as a task.
-If NO → output exactly: null
+Find ALL recurring events happening tomorrow ({tomorrow_name}).
 
 Rules:
-- Only suggest if the recurring event clearly matches tomorrow's day
-- Be conversational and friendly
-- Keep it to one sentence
-- End with a question mark
+- Return one line per event
+- Each line must be a short friendly reminder
+- Do NOT number the lines
+- If no events exist, return exactly: null
 
-Example output when match found:
-"You have tennis training tomorrow (Monday) — want me to add it to your tasks?"
+Example:
+You have gym tomorrow (Monday) — want me to add it to your tasks?
+You have swimming tomorrow (Monday) — want me to add it to your tasks?
 
-Example output when no match:
-null
-
-Output ONLY the suggestion string or null. Nothing else.
+Your answer:
 """
+
     try:
         completion = groq_client.chat.completions.create(
             model="openai/gpt-oss-120b",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
             temperature=0.3,
-            max_completion_tokens=100,
+            max_completion_tokens=500,
             top_p=1,
             stream=False,
         )
+
         response_text = completion.choices[0].message.content.strip()
 
-        if response_text.lower() == "null" or response_text == "":
-            return None
+        logger.info(
+            "get_upcoming_suggestions: raw LLM response=%r",
+            response_text
+        )
 
-        response_text = response_text.strip('"').strip("'")
-        logger.info("get_upcoming_suggestions: suggestion=%r", response_text)
-        return response_text
+        # No suggestions
+        if (
+            not response_text
+            or response_text.lower().strip() == "null"
+        ):
+            logger.info(
+                "get_upcoming_suggestions: no upcoming suggestions found"
+            )
+            return []
+
+        # Split into multiple suggestions
+        suggestions = []
+
+        for line in response_text.splitlines():
+
+            clean_line = (
+                line.strip()
+                .strip('"')
+                .strip("'")
+                .strip("-")
+                .strip()
+            )
+
+            if clean_line:
+                suggestions.append(clean_line)
+
+        logger.info(
+            "get_upcoming_suggestions: parsed %d suggestions",
+            len(suggestions)
+        )
+
+        for s in suggestions:
+            logger.info(
+                "get_upcoming_suggestions: suggestion=%r",
+                s
+            )
+
+        return suggestions
 
     except Exception as e:
-        logger.exception("get_upcoming_suggestions: failed, error=%s", e)
-        return None
+        logger.exception(
+            "get_upcoming_suggestions: failed, error=%s",
+            e
+        )
+        return []
 
 
 def handle_suggestion_response(user_text: str) -> bool:

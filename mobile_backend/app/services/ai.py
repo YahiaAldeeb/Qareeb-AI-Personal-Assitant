@@ -95,13 +95,67 @@ def _strip_code_fences(text: str) -> str:
 
 
 def get_last_user_message(text: str) -> str:
-    lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+  # ✅ FIX: if text is a list, convert to string
+    if isinstance(text, list):
+
+        if len(text) == 0:
+            return ""
+
+        # take first item
+        text = text[0]
+
+    # ✅ safety
+    text = str(text)
+
+    lines = [
+        l.strip()
+        for l in text.strip().splitlines()
+        if l.strip()
+    ]
+
+    if not lines:
+        return ""
+
     return lines[-1]
 
-
 def get_conversation_history(text: str) -> str:
-    lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
-    return "\n".join(lines[:-1])
+       # ✅ FIX: handle list input
+    if isinstance(text, list):
+
+        # convert list into text conversation
+        text = "\n".join([str(x) for x in text])
+
+    # ✅ safety
+    text = str(text)
+
+    lines = [
+        l.strip()
+        for l in text.strip().splitlines()
+        if l.strip()
+    ]
+    conversation = []
+
+    for line in lines:
+
+        if line.lower().startswith("user:"):
+            conversation.append({
+                "role": "user",
+                "content": line[5:].strip()
+            })
+
+        elif line.lower().startswith("assistant:"):
+            conversation.append({
+                "role": "assistant",
+                "content": line[10:].strip()
+            })
+
+        else:
+            conversation.append({
+                "role": "user",
+                "content": line
+            })
+
+    return conversation
 
 
 def _is_update_request(text: str) -> bool:
@@ -367,7 +421,6 @@ async def handle_task_tracker_service(text: str, userID: str, db: Session) -> di
         conversation_history = get_conversation_history(text)
         is_update = _is_update_request(clean_text)
 
-        # Load memories once
         memories = get_user_memories(db, userID)
         memory_context = build_memory_context(memories)
         logger.info(
@@ -416,29 +469,13 @@ async def handle_task_tracker_service(text: str, userID: str, db: Session) -> di
 
             task_id = str(task_row["taskID"])
             changes["updated_at"] = datetime.now(timezone.utc).isoformat()
-
             updated_task = update_task_service(db, task_id, changes)
 
             ai_response = f"Updated task '{task_row['title']}': {changes}"
-
-            # Log interaction
-            save_interaction(
-                db=db,
-                userID=userID,
-                user_message=clean_text,
-                qareeb_response=ai_response,
-                intent="TASK_TRACKER",
-                module="TASK_TRACKER",
-            )
-
-            # Extract explicit memories
-            new_facts = extract_memory_facts(
-                f"User: {clean_text}\nQareeb: {ai_response}",
-                memories
-            )
+            save_interaction(db=db, userID=userID, user_message=clean_text,
+                           qareeb_response=ai_response, intent="TASK_TRACKER", module="TASK_TRACKER")
+            new_facts = extract_memory_facts(f"User: {clean_text}\nQareeb: {ai_response}", memories)
             save_memory_facts(db, userID, new_facts)
-
-            # Behavioral analysis
             await run_behavioral_analysis_if_needed(db, userID)
 
             return {"success": True, "data": {"task": updated_task}}
@@ -446,6 +483,18 @@ async def handle_task_tracker_service(text: str, userID: str, db: Session) -> di
         # ── CREATE ───────────────────────────────────────────────────────
         else:
             logger.info("handle_task_tracker_service: routing to CREATE flow")
+
+            # ✅ Fix: if text is a yes response, don't extract task from it
+            yes_words = ["yes", "yeah", "yep", "sure", "ok", "okay",
+                        "do it", "add it", "create it", "go ahead", "please",
+                        "yes please"]
+            if clean_text.lower().strip() in yes_words or clean_text.lower() == "yes please":
+                logger.warning(
+                    "handle_task_tracker_service: received yes/confirmation text=%r, "
+                    "cannot create task without context", clean_text
+                )
+                return {"success": False, "error": "No task context provided"}
+
             task_data = extract_task_data(clean_text, memory_context)
             task_data["userID"] = userID.strip()
             task_data["created_at"] = datetime.now(timezone.utc).isoformat()
@@ -455,24 +504,10 @@ async def handle_task_tracker_service(text: str, userID: str, db: Session) -> di
             task_title = task_data.get("title", "")
             ai_response = f"Created task: {task_title}"
 
-            # Log interaction
-            save_interaction(
-                db=db,
-                userID=userID,
-                user_message=clean_text,
-                qareeb_response=ai_response,
-                intent="TASK_TRACKER",
-                module="TASK_TRACKER",
-            )
-
-            # Extract explicit memories
-            new_facts = extract_memory_facts(
-                f"User: {clean_text}\nQareeb: {ai_response}",
-                memories
-            )
+            save_interaction(db=db, userID=userID, user_message=clean_text,
+                           qareeb_response=ai_response, intent="TASK_TRACKER", module="TASK_TRACKER")
+            new_facts = extract_memory_facts(f"User: {clean_text}\nQareeb: {ai_response}", memories)
             save_memory_facts(db, userID, new_facts)
-
-            # Behavioral analysis every 5 interactions
             await run_behavioral_analysis_if_needed(db, userID)
 
             return {"success": True, "data": controller_result}

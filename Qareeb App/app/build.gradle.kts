@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("org.jetbrains.kotlin.kapt")
     id ("kotlin-kapt")
-
+    id("com.google.gms.google-services")  // ✅ ADD THIS
 }
 
 android {

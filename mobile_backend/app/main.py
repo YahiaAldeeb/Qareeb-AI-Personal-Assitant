@@ -5,6 +5,12 @@ from app.database import get_db
 #from app.routers.memory_sync import router as memory_sync_router  # ✅ add this
 app = FastAPI()
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 app.include_router(users.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")

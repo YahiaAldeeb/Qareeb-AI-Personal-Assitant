@@ -175,7 +175,6 @@ async def process_text_controller(text: str, userID: str, db: Session):
         if userID in pending_suggestions and handle_suggestion_response(clean_text):
             logger.info("process_text_controller: user accepted suggestion")
             suggestion_text = pending_suggestions.pop(userID)
-
             result = await handle_task_tracker_service(suggestion_text, userID, db)
             return {
                 "status": "success" if result.get("success") else "error",
@@ -185,7 +184,7 @@ async def process_text_controller(text: str, userID: str, db: Session):
                 "message": "Task created from your suggestion!",
             }
 
-        # ── STEP 2: Check for proactive suggestion ────────────────────────
+        # ── STEP 2: Check memories and get suggestion ─────────────────────
         memories = get_user_memories(db, userID)
         logger.info(
             "process_text_controller: user has %d memories: %s",
@@ -197,10 +196,6 @@ async def process_text_controller(text: str, userID: str, db: Session):
 
         if suggestion_result:
             pending_suggestions[userID] = suggestion_result["suggestion"]
-            logger.info(
-                "process_text_controller: stored pending suggestion for userID=%s: %r",
-                userID, suggestion_result["suggestion"]
-            )
 
         # ── STEP 3: Normal intent flow ────────────────────────────────────
         logger.info("process_text_controller: extracting intent")
@@ -247,7 +242,7 @@ async def process_text_controller(text: str, userID: str, db: Session):
             logger.warning("process_text_controller: unknown intent=%s, text=%r", intent, text)
             response = {"status": "unknown_intent", "intent": intent, "text": text}
 
-        # ── STEP 4: Attach suggestion to response if any ──────────────────
+        # ── STEP 4: Attach suggestion to response ─────────────────────────
         if suggestion_result:
             response["suggestion"] = suggestion_result["suggestion"]
 
