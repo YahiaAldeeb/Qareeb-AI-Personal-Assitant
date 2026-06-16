@@ -1,6 +1,7 @@
 package com.example.qareeb.data.entity
 
 import androidx.room.*
+import java.sql.Blob
 import java.util.UUID
 
 
@@ -22,7 +23,7 @@ data class User(
 
     // Voice biometric authentication
     //Ma3moul Nullable 3shan momken yet7at fy JSON aw base64 encoded data
-    @ColumnInfo(name = "voice_embedding")
-    val voiceEmbedding: String? = null
+    @ColumnInfo(name = "voice_embedding", typeAffinity = ColumnInfo.BLOB)
+    val voiceEmbedding: ByteArray? = null
 )
 
