@@ -2,9 +2,12 @@ package com.example.qareeb.data.remote
 
 import android.content.SharedPreferences
 import android.util.Log
+import com.example.qareeb.data.dao.MemoryDao
+import com.example.qareeb.data.dao.PromptDao
 import com.example.qareeb.data.dao.TaskDao
 import com.example.qareeb.data.dao.TransactionDao
 import com.example.qareeb.data.dao.UserDao
+import com.example.qareeb.data.entity.Memory
 import com.example.qareeb.data.entity.Task
 import com.example.qareeb.data.entity.Transaction
 import com.example.qareeb.data.entity.User
@@ -14,12 +17,16 @@ class SyncRepository(
     private val taskDao: TaskDao,
     private val userDao: UserDao,
     private val transactionDao: TransactionDao,
+    private val promptDao: PromptDao,   // ← add
+    private val memoryDao: MemoryDao,   // ← add
     private val api: SyncApi,
     private val prefs: SharedPreferences
 ) {
     companion object {
         private const val LAST_SYNC_KEY = "last_sync_time"
         private const val LAST_TRANSACTION_SYNC_KEY = "last_transaction_sync_time"
+
+        private const val LAST_PROMPT_SYNC_KEY = "last_prompt_sync_time"
         private const val TAG = "SYNC"
     }
 
@@ -31,6 +38,8 @@ class SyncRepository(
             pullTasks(userId)
             pushTransactions(userId)
             pullTransactions(userId)
+            pushPrompts(userId)       // ← add
+            pullMemory(userId)        // ← add
             Log.d(TAG, "========== SYNC COMPLETE ==========")
         } catch (e: Exception) {
             Log.e(TAG, "========== SYNC FAILED ==========")
@@ -303,5 +312,60 @@ class SyncRepository(
         }
 
         Log.d(TAG, "--- TRANSACTION PULL COMPLETE ---")
+    }
+    private suspend fun pushPrompts(userId: String) {
+        Log.d(TAG, "--- PROMPT PUSH START ---")
+        val recent = promptDao.getRecentPrompts(userId, 20)
+        if (recent.isEmpty()) {
+            Log.d(TAG, "No prompts to push")
+            return
+        }
+
+        val payload = PromptPushPayload(
+            records = recent.map { p ->
+                PromptSync(
+                    prompt_id = p.promptId,
+                    userId = p.userId,
+                    userMessage = p.userMessage,
+                    qareebResponse = p.qareebResponse,
+                    promptType = p.promptType,
+                    module = p.module,
+                    intentDetected = p.intentDetected,
+                    createdAt = p.createdAt,
+                    metadata = p.metadata
+                )
+            }
+        )
+
+        try {
+            api.pushPrompts(payload)
+            promptDao.pruneOldPrompts(userId)
+            Log.d(TAG, "Pushed ${recent.size} prompts")
+        } catch (e: Exception) {
+            Log.e(TAG, "Prompt push failed: ${e.message}")
+        }
+        Log.d(TAG, "--- PROMPT PUSH COMPLETE ---")
+    }
+
+    private suspend fun pullMemory(userId: String) {
+        Log.d(TAG, "--- MEMORY PULL START ---")
+        try {
+            val response = api.pullMemory(userId)
+            response.records.forEach { remote ->
+                memoryDao.deleteByKeyPattern(userId, "%${remote.fact.take(20)}%")
+                memoryDao.insertMemory(
+                    Memory(
+                        memoryId = remote.memory_id,
+                        userId = remote.userId,
+                        fact = remote.fact,
+                        createdAt = remote.createdAt
+                    )
+                )
+            }
+            Log.d(TAG, "Pulled ${response.records.size} memories")
+        } catch (e: Exception) {
+            Log.e(TAG, "Memory pull failed: ${e.message}")
+        }
+        Log.d(TAG, "--- MEMORY PULL COMPLETE ---")
     }
 }

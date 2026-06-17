@@ -1,15 +1,16 @@
 package com.example.qareeb.data.entity
 
 import androidx.room.*
+import java.util.UUID
 
 @Entity(tableName = "memory")
 data class Memory(
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     @ColumnInfo(name = "memory_id")
-    val memoryId: Long = 0,
+    val memoryId :String = UUID.randomUUID().toString(),
 
-    @ColumnInfo(name = "userID")
-    val userId: Long,
+    @ColumnInfo(name = "userId")
+    val userId: String,
 
     val fact: String,
     val embedding: String? = null,

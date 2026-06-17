@@ -9,7 +9,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.qareeb.data.AppDatabase
 import com.example.qareeb.data.remote.SyncRepository
+import com.example.qareeb.data.repositoryImp.CategoryRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.domain.repository.UserRepository
@@ -43,6 +46,8 @@ import com.example.qareeb.presentation.viewModels.TaskViewModel
 import com.example.qareeb.presentation.viewModels.TaskViewModelFactory
 import com.example.qareeb.presentation.viewModels.UserViewModel
 import com.example.qareeb.presentation.viewModels.UserViewModelFactory
+import com.example.qareeb.presentation.viewModels.ChatBotViewModel
+import com.example.qareeb.presentation.viewModels.ChatBotViewModelFactory
 
 object Routes {
     const val SPLASH = "splash"
@@ -55,19 +60,50 @@ object Routes {
     const val PROFILE = "profile"
 }
 
+// ✅ MainScaffold — now has onLoginSuccess
+@Composable
+fun MainScaffold(
+    sessionManager: SessionManager,
+    taskRepo: TaskRepositoryImpl,
+    financeRepo: TransactionRepositoryImpl,
+    categoryRepo: CategoryRepositoryImpl,
+    userRepository: UserRepository,
+    syncRepository: SyncRepository,
+    db: AppDatabase,
+    onStartQareeb: () -> Unit,
+    onLoginSuccess: () -> Unit = {}  // ✅ added
+) {
+    val navController = rememberNavController()
+
+    AppNavGraph(
+        navController = navController,
+        sessionManager = sessionManager,
+        taskRepo = taskRepo,
+        financeRepo = financeRepo,
+        categoryRepo = categoryRepo,
+        syncRepository = syncRepository,
+        userRepository = userRepository,
+        db = db,
+        onStartQareeb = onStartQareeb,
+        onLoginSuccess = onLoginSuccess  // ✅ passed down
+    )
+}
+
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     sessionManager: SessionManager,
     taskRepo: TaskRepositoryImpl,
     financeRepo: TransactionRepositoryImpl,
+    categoryRepo: CategoryRepositoryImpl,
     syncRepository: SyncRepository,
     userRepository: UserRepository,
-    onStartQareeb: () -> Unit
+    db: AppDatabase,
+    onStartQareeb: () -> Unit,
+    onLoginSuccess: () -> Unit = {}  // ✅ added
 ) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    // Bottom bar should only be visible on main app screens, not on auth/splash screens
     val showBottomBar = currentRoute in listOf(
         Routes.DASHBOARD,
         Routes.TASKS,
@@ -97,7 +133,6 @@ fun AppNavGraph(
     val updateTransaction = UpdateTransactionUseCase(financeRepo)
     val deleteTransaction = DeleteTransactionUseCase(financeRepo)
 
-    // Scaffold owns the BottomNavBar visibility based on current route
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
@@ -120,7 +155,6 @@ fun AppNavGraph(
                 )
             }
 
-            // Login (no bottom bar)
             composable(Routes.LOGIN) {
                 val vm: LoginViewModel = viewModel(
                     factory = LoginViewModelFactory(
@@ -132,6 +166,7 @@ fun AppNavGraph(
                 LoginScreen(
                     viewModel = vm,
                     onLoginSuccess = {
+                        onLoginSuccess()  // ✅ register FCM token after login
                         navController.navigate(Routes.DASHBOARD) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
@@ -141,7 +176,6 @@ fun AppNavGraph(
                 )
             }
 
-            // Register (no bottom bar)
             composable(Routes.REGISTER) {
                 val vm: SignUpViewModel = viewModel(
                     factory = SignUpViewModelFactory(
@@ -152,6 +186,7 @@ fun AppNavGraph(
                 SignUpScreen(
                     viewModel = vm,
                     onSignUpSuccess = {
+                        onLoginSuccess()  // ✅ also register FCM token after signup
                         navController.navigate(Routes.SPLASH) {
                             popUpTo(Routes.REGISTER) { inclusive = true }
                         }
@@ -164,7 +199,6 @@ fun AppNavGraph(
                 )
             }
 
-            // Dashboard (bottom bar shows)
             composable(Routes.DASHBOARD) {
                 val vm: DashboardViewModel =
                     viewModel(
@@ -182,7 +216,6 @@ fun AppNavGraph(
                 )
             }
 
-            // Tasks (bottom bar shows)
             composable(Routes.TASKS) {
                 val vm: TaskViewModel =
                     viewModel(
@@ -198,7 +231,6 @@ fun AppNavGraph(
                 TasksScreen(viewModel = vm)
             }
 
-            // Finance (bottom bar shows)
             composable(Routes.FINANCE) {
                 val vm: FinanceViewModel =
                     viewModel(
@@ -208,21 +240,33 @@ fun AppNavGraph(
                             addTransaction = addTransaction,
                             deleteTransaction = deleteTransaction,
                             sessionManager = sessionManager,
+                            transactionRepository = financeRepo,
+                            categoryRepository = categoryRepo,
                             username = username
                         )
                     )
                 FinanceScreen(viewModel = vm)
             }
 
-            // ChatBot (bottom bar shows)
             composable(Routes.CHATBOT) {
+                val vm: ChatBotViewModel =
+                    viewModel(
+                        factory = ChatBotViewModelFactory(
+                            transactionDao = db.transactionDao(),
+                            taskDao = db.taskDao(),
+                            promptDao = db.promptDao(),
+                            memoryDao = db.memoryDao(),
+                            sessionManager = sessionManager,
+                            syncRepository = syncRepository
+                        )
+                    )
                 ChatBotScreen(
+                    viewModel = vm,
                     username = username,
                     onStartQareeb = onStartQareeb
                 )
             }
 
-            // Profile (bottom bar shows)
             composable(Routes.PROFILE) {
                 ProfileScreen(
                     userViewModel = userViewModel,
