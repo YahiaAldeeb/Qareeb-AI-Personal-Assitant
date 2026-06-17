@@ -15,6 +15,7 @@ import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.CategoryRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
+import com.example.qareeb.domain.model.UserDomain
 import com.example.qareeb.domain.repository.UserRepository
 import com.example.qareeb.domain.usecase.task.AddTaskUseCase
 import com.example.qareeb.domain.usecase.task.DeleteTaskUseCase
@@ -31,6 +32,7 @@ import com.example.qareeb.presentation.screens.LoginScreen
 import com.example.qareeb.presentation.screens.SignUpScreen
 import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.screens.TasksScreen
+import com.example.qareeb.presentation.screens.VoiceEnrollmentScreen
 import com.example.qareeb.presentation.screens.ProfileScreen
 import com.example.qareeb.presentation.ui.components.BottomNavBar
 import com.example.qareeb.presentation.utilis.SessionManager
@@ -46,6 +48,7 @@ import com.example.qareeb.presentation.viewModels.TaskViewModel
 import com.example.qareeb.presentation.viewModels.TaskViewModelFactory
 import com.example.qareeb.presentation.viewModels.UserViewModel
 import com.example.qareeb.presentation.viewModels.UserViewModelFactory
+import com.example.qareeb.presentation.viewModels.VoiceEnrollmentViewModel
 import com.example.qareeb.presentation.viewModels.ChatBotViewModel
 import com.example.qareeb.presentation.viewModels.ChatBotViewModelFactory
 
@@ -57,6 +60,7 @@ object Routes {
     const val CHATBOT = "chatbot"
     const val FINANCE = "finance"
     const val REGISTER = "register"
+    const val VOICE_ENROLLMENT = "voice_enrollment"
     const val PROFILE = "profile"
 }
 
@@ -139,6 +143,20 @@ fun AppNavGraph(
                 BottomNavBar(navController = navController)
             }
         }
+
+        //Dashboard
+        composable(Routes.DASHBOARD) {
+            val userViewModel: UserViewModel = viewModel(
+                factory = UserViewModelFactory(sessionManager)
+            )
+            val username = userViewModel.username
+
+            val vm: DashboardViewModel = viewModel(
+                factory = DashboardViewModelFactory(
+                    getTasksByUser = getTasksByUser,
+                    getTransactionsByUser = getTransactionsByUser,
+                    sessionManager = sessionManager,
+                    username = username
     ) { paddingValues ->
         NavHost(
             navController = navController,
@@ -155,6 +173,52 @@ fun AppNavGraph(
                 )
             }
 
+        // ── Tasks ──
+        composable(Routes.TASKS) {
+            val userViewModel: UserViewModel = viewModel(
+                factory = UserViewModelFactory(sessionManager)
+            )
+            val username = userViewModel.username
+
+            val vm: TaskViewModel = viewModel(
+                factory = TaskViewModelFactory(
+                    getTasksByUser = getTasksByUser,
+                    addTask = addTask,
+                    updateTask = updateTask,
+                    deleteTask = deleteTask,
+                    sessionManager = sessionManager,
+                    username = username
+                )
+            )
+            TasksScreen(viewModel = vm)
+        }
+
+        //finance
+        composable(Routes.FINANCE) {
+            val userViewModel: UserViewModel = viewModel(
+                factory = UserViewModelFactory(sessionManager)
+            )
+            val username = userViewModel.username
+
+            val vm: FinanceViewModel = viewModel(
+                factory = FinanceViewModelFactory(
+                    getTransactionsByUser = getTransactionsByUser,
+                    updateTransaction = updateTransaction,
+                    addTransaction = addTransaction,
+                    deleteTransaction = deleteTransaction,
+                    sessionManager = sessionManager,
+                    username = username
+                )
+            )
+            FinanceScreen(viewModel = vm)
+        }
+        //login
+        composable(Routes.LOGIN) {
+            val vm: LoginViewModel = viewModel(
+                factory = LoginViewModelFactory(
+                    userRepository = userRepository,
+                    sessionManager = sessionManager,
+                    syncRepository = syncRepository
             composable(Routes.LOGIN) {
                 val vm: LoginViewModel = viewModel(
                     factory = LoginViewModelFactory(
@@ -214,6 +278,52 @@ fun AppNavGraph(
                     onViewAllPlans = { navController.navigate(Routes.TASKS) },
                     onViewAllExpenses = { navController.navigate(Routes.FINANCE) }
                 )
+            )
+            SignUpScreen(
+                viewModel = vm,
+                onSignUpSuccess = {
+                    navController.navigate(Routes.VOICE_ENROLLMENT) {
+                        popUpTo(Routes.REGISTER) { inclusive = true }
+                    }
+                },
+                onLoginClick = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.REGISTER) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Voice Enrollment
+        composable(Routes.VOICE_ENROLLMENT) {
+            val vm: VoiceEnrollmentViewModel = viewModel()
+            // Retrieve the registered user from session
+            val user = UserDomain(
+                userId = sessionManager.getUserId() ?:"",
+                name = sessionManager.getUsername() ?: "",
+                email = sessionManager.getUserEmail() ?: "",
+                password = ""
+            )
+
+            VoiceEnrollmentScreen(
+                viewModel = vm,
+                user = user,
+                onEnrollmentSuccess = {
+                    navController.navigate(Routes.SPLASH) {
+                        popUpTo(Routes.VOICE_ENROLLMENT) { inclusive = true }
+                    }
+                },
+                onLoginClick = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.VOICE_ENROLLMENT) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ── ChatBot ──
+        composable(Routes.CHATBOT) {
+            ChatBotScreen()
             }
 
             composable(Routes.TASKS) {
