@@ -10,6 +10,10 @@ interface TransactionRepository {
     suspend fun insertTransaction(transaction: TransactionDomain): Long
     suspend fun updateTransaction(transaction: TransactionDomain)
     suspend fun deleteTransaction(transaction: TransactionDomain)
-
-    suspend fun getTransactionsByState(userId:Long,state: TransactionState): Flow<List<TransactionDomain>>
+    suspend fun getTransactionsByState(
+        userId: String,   // ← changed Long to String
+        state: TransactionState
+    ): Flow<List<TransactionDomain>>
+    suspend fun updateTransactionCategoryId(transactionId: String, categoryId: String)
+    suspend fun getUncategorizedTransactions(userId: String): List<TransactionDomain>
 }

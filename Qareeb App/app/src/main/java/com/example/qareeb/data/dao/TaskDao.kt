@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM task WHERE user_id = :userId ORDER BY created_at DESC")
+    @Query("SELECT * FROM task WHERE userID = :userId ORDER BY created_at DESC")
     fun getTasksByUser(userId: String): Flow<List<Task>>
 
-    @Query("SELECT * FROM task WHERE user_id = :userId AND status = :status")
+    @Query("SELECT * FROM task WHERE userID = :userId AND status = :status")
     fun getTasksByStatus(userId: String, status: TaskStatus): Flow<List<Task>>
 
     @Insert
@@ -23,7 +23,7 @@ interface TaskDao {
     @Delete
     suspend fun deleteTask(task: Task)
 
-    @Query("SELECT * FROM task WHERE user_id = :userId AND is_deleted = 0")
+    @Query("SELECT * FROM task WHERE userID = :userId AND is_deleted = 0")
     suspend fun getTasksByUserOneShot(userId: String): List<Task>
 
     // upsert — insert or replace if exists

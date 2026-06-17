@@ -1,6 +1,7 @@
 package com.example.qareeb.presentation.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,8 +32,12 @@ import com.example.qareeb.R
 import com.example.qareeb.presentation.theme.dmSansFamily
 
 @Composable
-fun ChatInputBar() {
+fun ChatInputBar(
+    onSendMessage: (String) -> Unit,
+    enabled: Boolean = true
+) {
     var text by remember { mutableStateOf("") }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -67,8 +72,9 @@ fun ChatInputBar() {
                 Spacer(modifier = Modifier.width(10.dp))
                 BasicTextField(
                     value = text,
-                    onValueChange = { text = it },
+                    onValueChange = { if (enabled) text = it },
                     singleLine = true,
+                    enabled = enabled,
                     textStyle = TextStyle(
                         color = Color.Black,
                         fontSize = 16.sp,
@@ -106,12 +112,24 @@ fun ChatInputBar() {
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Icon(
-                    painter = painterResource(id = R.drawable.send),
-                    contentDescription = "Send",
-                    tint = Color.Black,
-                    modifier = Modifier.size(30.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clickable(enabled = enabled && text.isNotBlank()) {
+                            if (enabled && text.isNotBlank()) {
+                                onSendMessage(text)
+                                text = ""
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.send),
+                        contentDescription = "Send",
+                        tint = if (enabled && text.isNotBlank()) Color(0xFF6366F1) else Color.Gray,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
             }
         }
     }

@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("org.jetbrains.kotlin.kapt")
     id ("kotlin-kapt")
-
+    id("com.google.gms.google-services")  // ✅ ADD THIS
 }
 
 android {
@@ -99,7 +99,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation("ai.picovoice:porcupine-android:3.0.1")
+    implementation("ai.picovoice:porcupine-android:4.0.0")
     implementation("com.airbnb.android:lottie:6.1.0")
     implementation("com.alphacephei:vosk-android:0.3.47")
     //Database
@@ -116,7 +116,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     /* ---------------- AI / Animations ---------------- */
-    implementation("ai.picovoice:porcupine-android:3.0.1")
+    implementation("ai.picovoice:porcupine-android:4.0.0")
     implementation("com.airbnb.android:lottie:6.1.0")
 
     /* ---------------- Testing ---------------- */
@@ -142,4 +142,9 @@ dependencies {
 // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // Charts - Vico
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.google.firebase:firebase-messaging")
+    //implementation("com.google.firebase:firebase-messaging")
 }

@@ -79,8 +79,8 @@ fun BottomNavBar(navController: NavHostController) {
             )
 
             NavigationBarItem(
-                selected = currentRoute == "profile", // change when you add profile route
-                onClick = { /* TODO: add profile route later */ },
+                selected = currentRoute == Routes.PROFILE,
+                onClick = { navigateTo(Routes.PROFILE) },
                 icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                 label = { Text("Profile") }
             )

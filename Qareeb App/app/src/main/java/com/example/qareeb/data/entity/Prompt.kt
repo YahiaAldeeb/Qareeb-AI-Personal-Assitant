@@ -1,15 +1,16 @@
 package com.example.qareeb.data.entity
 
 import androidx.room.*
+import java.util.UUID
 
 @Entity(tableName = "prompts")
 data class Prompt(
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     @ColumnInfo(name = "prompt_id")
-    val promptId: Long = 0,
+    val promptId: String = UUID.randomUUID().toString(),
 
-    @ColumnInfo(name = "user_id")
-    val userId: Long,
+    @ColumnInfo(name = "userID")
+    val userId: String,
 
     @ColumnInfo(name = "user_message")
     val userMessage: String,
@@ -19,6 +20,9 @@ data class Prompt(
 
     @ColumnInfo(name = "prompt_type")
     val promptType: String,
+
+    @ColumnInfo(name = "module")
+    val module: String = "CHATBOT", // "CHATBOT","FINANCE","TASK","UI_AUTOMATION"
 
     @ColumnInfo(name = "intent_detected")
     val intentDetected: String? = null,

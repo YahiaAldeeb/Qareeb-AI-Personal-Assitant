@@ -9,8 +9,8 @@ import java.util.UUID
     foreignKeys = [
         ForeignKey(
             entity = User::class,
-            parentColumns = ["user_id"],
-            childColumns = ["user_id"],
+            parentColumns = ["userID"],
+            childColumns = ["userID"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
@@ -20,14 +20,14 @@ import java.util.UUID
             onDelete = ForeignKey.SET_NULL
         )
     ],
-    indices = [Index("user_id"), Index("category_id")]
+    indices = [Index("userID"), Index("category_id")]
 )
 data class Transaction(
     @PrimaryKey
     @ColumnInfo(name = "transaction_id")
     val transactionId: String = UUID.randomUUID().toString(),
 
-    @ColumnInfo(name = "user_id")
+    @ColumnInfo(name = "userID")
     val userId: String,
 
     @ColumnInfo(name = "category_id")
@@ -36,12 +36,20 @@ data class Transaction(
     val amount: Double,
     val date: Long = System.currentTimeMillis(),
     val source: String? = null,
-    val description: String?= null,
+    val description: String? = null,
     val title: String,
 
-    // true = income (green), false = outcome/expense (red)
     val income: Boolean = false,
 
-    // Transaction state using enum: "completed", "declined", "pending", "in_progress"
-    val state: TransactionState = TransactionState.PENDING
+    val state: TransactionState = TransactionState.PENDING,
+
+    // ── Sync fields ──
+    @ColumnInfo(name = "is_deleted")
+    val isDeleted: Boolean = false,
+
+    @ColumnInfo(name = "is_synced")
+    val is_synced: Boolean = false,
+
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: String = java.time.OffsetDateTime.now().toString()
 )
