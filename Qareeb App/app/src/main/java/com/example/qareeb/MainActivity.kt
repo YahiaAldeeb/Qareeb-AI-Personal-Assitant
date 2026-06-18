@@ -11,6 +11,12 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.qareeb.data.AppDatabase
@@ -20,12 +26,14 @@ import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
 import com.example.qareeb.presentation.MainScaffold
+import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.utilis.SessionManager
+import com.example.qareeb.security.AppLockManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainActivity : ComponentActivity() {
+class MainActivity :  AppCompatActivity() {
 
     private val TAG = "QAREEB_DEBUG"
 
@@ -112,17 +120,36 @@ class MainActivity : ComponentActivity() {
                 Log.d("SYNC", "No user logged in, skipping sync")
             }
         }
-
-        // ✅ Compose entry point
         setContent {
-            MainScaffold(
-                sessionManager = sessionManager,
-                taskRepo = taskRepo,
-                financeRepo = financeRepo,
-                syncRepository = syncRepository,
-                userRepository = userRepo,
-                onStartQareeb = { checkPermissionsAndStart() } // called from ChatBotScreen switch
-            )
+            var isAppUnlocked by remember { mutableStateOf(!AppLockManager.isLocked) }
+            var showSplash by remember { mutableStateOf(true) }
+
+            // Re-lock whenever app returns from background
+            LaunchedEffect(AppLockManager.isLocked) {
+                if (AppLockManager.isLocked) {
+                    isAppUnlocked = false
+                    showSplash = true   // show splash + re-trigger biometric on resume
+                }
+            }
+
+            if (showSplash) {
+                SplashScreen(
+                    activity = this@MainActivity,  // ✅ pass activity directly
+                    onSplashFinished = {
+                        isAppUnlocked = true
+                        showSplash = false
+                    }
+                )
+            } else if (isAppUnlocked) {
+                MainScaffold(
+                    sessionManager = sessionManager,
+                    taskRepo = taskRepo,
+                    financeRepo = financeRepo,
+                    syncRepository = syncRepository,
+                    userRepository = userRepo,
+                    onStartQareeb = { checkPermissionsAndStart() }
+                )
+            }
         }
     }
 

@@ -20,7 +20,9 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/qareeb"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Qareeb.Splash">
+        android:theme="@style/Theme.Qareeb.Splash"
+        android:name=".QareebApp">
+
 
         <activity
             android:name=".MainActivity"

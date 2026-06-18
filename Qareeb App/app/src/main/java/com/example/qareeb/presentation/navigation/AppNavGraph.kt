@@ -43,6 +43,8 @@ import com.example.qareeb.presentation.viewModels.TaskViewModel
 import com.example.qareeb.presentation.viewModels.TaskViewModelFactory
 import com.example.qareeb.presentation.viewModels.UserViewModel
 import com.example.qareeb.presentation.viewModels.UserViewModelFactory
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.platform.LocalContext
 
 object Routes {
     const val SPLASH = "splash"
@@ -111,7 +113,9 @@ fun AppNavGraph(
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Routes.SPLASH) {
+                val activity = LocalContext.current as AppCompatActivity
                 SplashScreen(
+                    activity = activity,
                     onSplashFinished = {
                         navController.navigate(Routes.DASHBOARD) {
                             popUpTo(Routes.SPLASH) { inclusive = true }
