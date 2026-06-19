@@ -22,6 +22,10 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/qareeb"
         android:supportsRtl="true"
+        android:theme="@style/Theme.Qareeb.Splash"
+        android:name=".QareebApp">
+
+
         android:theme="@style/Theme.Qareeb.Splash">
         <receiver
             android:name=".NotificationActionReceiver"

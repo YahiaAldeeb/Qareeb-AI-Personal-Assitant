@@ -1,17 +1,15 @@
 package com.example.qareeb.presentation.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,22 +20,57 @@ import com.example.qareeb.R
 import com.example.qareeb.presentation.theme.QareebTheme
 import com.example.qareeb.presentation.theme.dmSansFamily
 import com.example.qareeb.presentation.ui.components.FullBackground
+import com.example.qareeb.security.AppLockManager
+import com.example.qareeb.security.BiometricAuthHelper
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(onSplashFinished: () -> Unit = {}) {
+fun SplashScreen(
+    activity: androidx.fragment.app.FragmentActivity,
+    onSplashFinished: () -> Unit = {}
+) {
+    var showNoCredentialsWarning by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(2500L)
-        onSplashFinished()
+        delay(1500L)
+        BiometricAuthHelper.authenticate(
+            activity = activity,
+            onSuccess = {
+                AppLockManager.unlock()
+                onSplashFinished()
+            },
+            onFailure = {},
+            onNoCredentialsSet = { showNoCredentialsWarning = true }
+        )
     }
 
-    SplashContent()
+    SplashContent(
+        showNoCredentialsWarning = showNoCredentialsWarning,
+        onRetry = {
+            BiometricAuthHelper.authenticate(
+                activity = activity,
+                onSuccess = {
+                    AppLockManager.unlock()
+                    onSplashFinished()
+                },
+                onFailure = {},
+                onNoCredentialsSet = { showNoCredentialsWarning = true }
+            )
+        },
+        onContinueAnyway = {
+            AppLockManager.unlock()
+            onSplashFinished()
+        }
+    )
 }
 
 // ── Separated content so preview works ──
 @Composable
-fun SplashContent() {
+fun SplashContent(
+    showNoCredentialsWarning: Boolean = false,
+    onRetry: () -> Unit = {},
+    onContinueAnyway: () -> Unit = {}
+) {
     FullBackground {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -53,7 +86,7 @@ fun SplashContent() {
                 contentDescription = "Qareeb Logo",
                 modifier = Modifier.size(250.dp)
             )
-            Spacer(modifier = Modifier.size(30.dp))
+
             // ── Slogan below logo ──
             Text(
                 text = "Always close, always ready.",
@@ -64,6 +97,30 @@ fun SplashContent() {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 300.dp)
             )
+
+            // ── Security warning / retry UI ──
+            if (showNoCredentialsWarning) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(top = 420.dp)
+                ) {
+                    Text(
+                        text = "No PIN, pattern, or biometric set up on this device.\nWe recommend securing your device.",
+                        fontSize = 12.sp,
+                        fontFamily = dmSansFamily,
+                        color = Color(0xFFFC8181),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = onContinueAnyway,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED))
+                    ) {
+                        Text("Continue Anyway")
+                    }
+                }
+            }
         }
     }
 }
@@ -72,6 +129,14 @@ fun SplashContent() {
 @Composable
 fun SplashScreenPreview() {
     QareebTheme {
-        SplashContent()  // ← no LaunchedEffect, no navigation, safe to preview
+        SplashContent()
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun SplashScreenNoCredentialsPreview() {
+    QareebTheme {
+        SplashContent(showNoCredentialsWarning = true)
     }
 }
