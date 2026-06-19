@@ -30,11 +30,9 @@ fun MainScaffold(
         sessionManager = sessionManager,
         taskRepo = taskRepo,
         financeRepo = financeRepo,
-        categoryRepo = categoryRepo,
+        categoryRepository = categoryRepo,
         syncRepository = syncRepository,
         userRepository = userRepository,
-        db = db,
-        onStartQareeb = onStartQareeb,
-        onLoginSuccess = onLoginSuccess  // ✅ add this
+
     )
 }
