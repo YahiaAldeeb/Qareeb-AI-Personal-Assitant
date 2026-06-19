@@ -14,4 +14,6 @@ interface TransactionRepository {
         userId: String,   // ← changed Long to String
         state: TransactionState
     ): Flow<List<TransactionDomain>>
+    suspend fun updateTransactionCategoryId(transactionId: String, categoryId: String)
+    suspend fun getUncategorizedTransactions(userId: String): List<TransactionDomain>
 }

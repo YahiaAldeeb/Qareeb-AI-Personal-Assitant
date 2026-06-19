@@ -17,13 +17,13 @@ import com.example.qareeb.data.entity.*
         Task::class,
         Activity::class
     ],
-    version = 3,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
-    abstract fun promptDao(): PromptDao
-    abstract fun memoryDao(): MemoryDao
+    abstract fun promptDao(): PromptDao    // ← add
+    abstract fun memoryDao(): MemoryDao    // ← add
     abstract fun categoryDao(): CategoryDao
     abstract fun transactionDao(): TransactionDao
     abstract fun taskDao(): TaskDao

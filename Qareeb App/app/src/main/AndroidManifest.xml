@@ -11,6 +11,8 @@
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -24,6 +26,10 @@
         android:name=".QareebApp">
 
 
+        android:theme="@style/Theme.Qareeb.Splash">
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -37,8 +43,16 @@
             android:name=".QareebListeningService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="microphone"
 
+            />
+        <service
+            android:name=".QareebFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

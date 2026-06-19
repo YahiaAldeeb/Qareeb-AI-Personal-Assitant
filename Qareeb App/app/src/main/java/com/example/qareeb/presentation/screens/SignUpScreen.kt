@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.qareeb.R
+import com.example.qareeb.domain.model.UserDomain
 import com.example.qareeb.presentation.theme.QareebTheme
 import com.example.qareeb.presentation.theme.interFamily
 import com.example.qareeb.presentation.ui.components.FullBackground
@@ -31,7 +32,7 @@ import com.example.qareeb.presentation.viewModels.SignUpViewModel
 @Composable
 fun SignUpScreen(
     viewModel: SignUpViewModel,
-    onSignUpSuccess: () -> Unit,
+    onSignUpSuccess: (UserDomain) -> Unit, // ✅ Now passes the user object
     onLoginClick: () -> Unit
 ) {
     val signUpState by viewModel.signUpState.collectAsState()
@@ -45,7 +46,9 @@ fun SignUpScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(signUpState) {
-        if (signUpState is SignUpState.Success) onSignUpSuccess()
+        if (signUpState is SignUpState.Success) {
+            onSignUpSuccess((signUpState as SignUpState.Success).user)
+        }
     }
 
     SignUpContent(
@@ -151,7 +154,6 @@ fun SignUpContent(
                     .padding(24.dp)
             ) {
                 Column {
-
                     // ── Full Name ──
                     Text("Full Name", fontSize = 14.sp, fontFamily = interFamily, color = Color.White)
                     Spacer(Modifier.height(8.dp))

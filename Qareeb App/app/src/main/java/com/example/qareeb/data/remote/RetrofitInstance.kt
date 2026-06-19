@@ -6,6 +6,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitInstance {
+    const val BASE_URL = "http://10.0.2.2:8000/api/"  // ✅ your actual backend URL
+
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
@@ -16,7 +18,7 @@ object RetrofitInstance {
 
     private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("http://192.168.1.7:8000/api/")
+            .baseUrl("http://10.0.2.2:8000/api/")
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

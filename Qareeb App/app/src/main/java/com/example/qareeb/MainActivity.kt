@@ -1,8 +1,10 @@
 package com.example.qareeb
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -21,7 +23,9 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.qareeb.data.AppDatabase
 import com.example.qareeb.data.remote.RetrofitInstance
+import com.example.qareeb.data.remote.SyncApi
 import com.example.qareeb.data.remote.SyncRepository
+import com.example.qareeb.data.repositoryImp.CategoryRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
@@ -29,6 +33,9 @@ import com.example.qareeb.presentation.MainScaffold
 import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.security.AppLockManager
+//import com.example.qareeb.presentation.navigation.MainScaffold
+import com.example.qareeb.presentation.utilis.SessionManager
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,15 +44,30 @@ class MainActivity :  AppCompatActivity() {
 
     private val TAG = "QAREEB_DEBUG"
 
-    // Activity-level deps (accessible from permission callbacks)
     private lateinit var db: AppDatabase
     private lateinit var sessionManager: SessionManager
     private lateinit var syncRepository: SyncRepository
 
-    // Used to continue starting Qareeb after user grants overlay permission in Settings
     private var pendingStartAfterOverlay = false
 
-    // 1) Overlay Permission launcher (Settings screen)
+    // ✅ Sync broadcast receiver
+    private val syncReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val userId = intent.getStringExtra("userID")
+                ?: sessionManager.getUserId()
+                ?: return
+            Log.d("SYNC", "Sync broadcast received for userID=$userId")
+            lifecycleScope.launch {
+                try {
+                    withContext(Dispatchers.IO) { syncRepository.sync(userId) }
+                    Log.d("SYNC", "Sync after notification completed")
+                } catch (e: Exception) {
+                    Log.e("SYNC", "Sync after notification failed: ${e.message}", e)
+                }
+            }
+        }
+    }
+
     private val overlayPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (pendingStartAfterOverlay) {
@@ -54,14 +76,11 @@ class MainActivity :  AppCompatActivity() {
             }
         }
 
-    // 2) Runtime Permissions launcher (Mic + Notifications)
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             val allGranted = permissions.entries.all { it.value }
             if (allGranted) {
                 startQareebService()
-                // Optional: minimize app
-                // moveTaskToBack(true)
             } else {
                 Log.w(TAG, "Permissions denied: $permissions")
             }
@@ -71,25 +90,37 @@ class MainActivity :  AppCompatActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Init DB + session
         db = AppDatabase.getDatabase(this)
         sessionManager = SessionManager.getInstance(this)
 
-        // Repos for UI
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
+        val categoryRepo = CategoryRepositoryImpl(db.categoryDao())
         val userRepo = UserRepositoryImpl(db.userDao())
 
-        // Sync repository
         syncRepository = SyncRepository(
             taskDao = db.taskDao(),
             userDao = db.userDao(),
             transactionDao = db.transactionDao(),
-            api = RetrofitInstance.syncApi, // must exist in your RetrofitInstance
+            promptDao = db.promptDao(),
+            memoryDao = db.memoryDao(),
+            api = RetrofitInstance.syncApi,
             prefs = getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
         )
 
-        // Sync on app start if already logged in (only if missing local data)
+        // ✅ Register sync broadcast receiver
+        val filter = IntentFilter("com.example.qareeb.SYNC_NOW")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(syncReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(syncReceiver, filter)
+        }
+
+        // ✅ Register FCM token
+        registerFcmToken()
+
+        // Sync on app start
         lifecycleScope.launch {
             val userId = sessionManager.getUserId()
             if (!userId.isNullOrEmpty()) {
@@ -99,22 +130,15 @@ class MainActivity :  AppCompatActivity() {
                 val localTransactions = withContext(Dispatchers.IO) {
                     db.transactionDao().getTransactionsByUserOneShot(userId)
                 }
-
                 if (localTasks.isEmpty() || localTransactions.isEmpty()) {
-                    Log.d(
-                        "SYNC",
-                        "Missing data → tasks: ${localTasks.size}, transactions: ${localTransactions.size}, syncing..."
-                    )
+                    Log.d("SYNC", "Missing data → syncing...")
                     try {
                         withContext(Dispatchers.IO) { syncRepository.sync(userId) }
                     } catch (e: Exception) {
                         Log.e("SYNC", "Sync failed: ${e.message}", e)
                     }
                 } else {
-                    Log.d(
-                        "SYNC",
-                        "All data present → tasks: ${localTasks.size}, transactions: ${localTransactions.size}, skipping sync"
-                    )
+                    Log.d("SYNC", "All data present → skipping sync")
                 }
             } else {
                 Log.d("SYNC", "No user logged in, skipping sync")
@@ -150,15 +174,62 @@ class MainActivity :  AppCompatActivity() {
                     onStartQareeb = { checkPermissionsAndStart() }
                 )
             }
+
+        setContent {
+            MainScaffold(
+                sessionManager = sessionManager,
+                taskRepo = taskRepo,
+                financeRepo = financeRepo,
+                categoryRepo = categoryRepo,
+                syncRepository = syncRepository,
+                userRepository = userRepo,
+                db = db,
+                onStartQareeb = { checkPermissionsAndStart() },
+                onLoginSuccess = { registerFcmToken() }
+            )
         }
     }
 
-    /**
-     * Called when user toggles "Enable Qareeb Voice Assistant" ON.
-     * Handles overlay permission -> runtime permissions -> starts foreground service.
-     */
+    override fun onDestroy() {
+        super.onDestroy()
+        // ✅ Unregister receiver to avoid memory leaks
+        try {
+            unregisterReceiver(syncReceiver)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to unregister syncReceiver: ${e.message}")
+        }
+    }
+
+    private fun registerFcmToken() {
+        val userId = sessionManager.getUserId()
+        if (userId.isNullOrEmpty()) {
+            Log.d("FCM", "No user logged in, skipping token registration")
+            return
+        }
+
+        FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                Log.d("FCM_TOKEN", "Token: $token")
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        RetrofitInstance.syncApi.registerFcmToken(
+                            SyncApi.FCMTokenRequest(
+                                userID = userId,
+                                fcm_token = token
+                            )
+                        )
+                        Log.d("FCM", "Token sent successfully")
+                    } catch (e: Exception) {
+                        Log.e("FCM", "Failed to send token: ${e.message}", e)
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("FCM", "Failed to get token: ${e.message}", e)
+            }
+    }
+
     private fun checkPermissionsAndStart() {
-        // 1) Overlay permission
         if (!Settings.canDrawOverlays(this)) {
             pendingStartAfterOverlay = true
             val intent = Intent(
@@ -169,18 +240,13 @@ class MainActivity :  AppCompatActivity() {
             return
         }
 
-        // 2) Runtime permissions: RECORD_AUDIO + (Android 13+) POST_NOTIFICATIONS
         val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= 33) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-
         requestPermissionLauncher.launch(perms.toTypedArray())
     }
 
-    /**
-     * Starts the listening foreground service.
-     */
     private fun startQareebService() {
         val intent = Intent(this, QareebListeningService::class.java)
         if (Build.VERSION.SDK_INT >= 26) {
@@ -189,5 +255,23 @@ class MainActivity :  AppCompatActivity() {
             startService(intent)
         }
         Log.d(TAG, "QareebListeningService started")
+    }
+    override fun onResume() {
+        super.onResume()
+        // ✅ Check if opened from notification
+        if (intent.getBooleanExtra("trigger_sync", false)) {
+            val userId = intent.getStringExtra("userID") ?: sessionManager.getUserId() ?: return
+            Log.d("SYNC", "App opened from notification, syncing...")
+            lifecycleScope.launch {
+                try {
+                    withContext(Dispatchers.IO) { syncRepository.sync(userId) }
+                    Log.d("SYNC", "Sync after notification completed")
+                } catch (e: Exception) {
+                    Log.e("SYNC", "Sync failed: ${e.message}", e)
+                }
+            }
+            // ✅ Clear the flag so it doesn't sync again on next resume
+            intent.removeExtra("trigger_sync")
+        }
     }
 }

@@ -1,7 +1,12 @@
 package com.example.qareeb.data.remote
 
+import okhttp3.MultipartBody
 import retrofit2.http.Body
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
+import retrofit2.http.Path
+import com.google.gson.annotations.SerializedName
 
 data class LoginRequest(
     val email: String,
@@ -24,7 +29,14 @@ data class RegisterRequest(
 data class RegisterResponse(
     val userID: String,
     val name: String,
-    val email: String
+    val email: String,
+
+)
+
+
+data class VoiceEmbeddingResponse(
+    @SerializedName("voice_embedding")
+    val voiceEmbedding: String
 )
 
 interface AuthApi {
@@ -33,4 +45,12 @@ interface AuthApi {
 
     @POST("users/register")
     suspend fun register(@Body request: RegisterRequest): RegisterResponse
+
+    // ✅ second API call — send .wav file after registration
+    @Multipart
+    @POST("users/voice/{userID}")
+    suspend fun registerVoice(
+        @Path("userID") userID: String,
+        @Part wavFile: MultipartBody.Part
+    ): VoiceEmbeddingResponse
 }
