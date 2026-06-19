@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("org.jetbrains.kotlin.kapt")
     id ("kotlin-kapt")
-
+    id("com.google.gms.google-services")  // ✅ ADD THIS
 }
 
 android {
@@ -142,4 +142,9 @@ dependencies {
 // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // Charts - Vico
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.google.firebase:firebase-messaging")
+    //implementation("com.google.firebase:firebase-messaging")
 }

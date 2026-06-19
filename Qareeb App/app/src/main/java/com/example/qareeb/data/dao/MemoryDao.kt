@@ -2,16 +2,20 @@ package com.example.qareeb.data.dao
 
 import androidx.room.*
 import com.example.qareeb.data.entity.Memory
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MemoryDao {
-    @Query("SELECT * FROM memory WHERE userID = :userId ORDER BY created_at DESC")
-    fun getMemoriesByUser(userId: String): Flow<List<Memory>>
 
     @Insert
-    suspend fun insertMemory(memory: Memory): Long
+    suspend fun insertMemory(memory: Memory)
 
-    @Delete
-    suspend fun deleteMemory(memory: Memory)
+    // Replace old fact with same key to avoid duplicates
+    @Query("DELETE FROM memory WHERE userId = :userId AND fact LIKE :keyPattern")
+    suspend fun deleteByKeyPattern(userId: String, keyPattern: String)
+
+    @Query("SELECT * FROM memory WHERE userId = :userId ORDER BY created_at DESC")
+    suspend fun getAllMemories(userId: String): List<Memory>
+
+    @Query("DELETE FROM memory WHERE memory_id = :id")
+    suspend fun deleteMemory(id: String)
 }

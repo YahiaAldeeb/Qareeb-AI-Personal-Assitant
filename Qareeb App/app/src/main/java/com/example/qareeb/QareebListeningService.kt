@@ -142,6 +142,8 @@ class QareebListeningService : Service() {
             taskDao = db.taskDao(),
             userDao = db.userDao(),
             transactionDao = db.transactionDao(),
+            promptDao = db.promptDao(),
+            memoryDao = db.memoryDao(),
             api = RetrofitInstance.syncApi,
             prefs = getSharedPreferences("sync_prefs", MODE_PRIVATE)
         )
