@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.qareeb.data.AppDatabase
 import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
@@ -30,6 +31,7 @@ import com.example.qareeb.presentation.screens.TasksScreen
 import com.example.qareeb.presentation.screens.VoiceEnrollmentScreen
 import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.presentation.viewModels.ChatBotViewModel
+import com.example.qareeb.presentation.viewModels.ChatBotViewModelFactory
 import com.example.qareeb.presentation.viewModels.DashboardViewModel
 import com.example.qareeb.presentation.viewModels.DashboardViewModelFactory
 import com.example.qareeb.presentation.viewModels.FinanceViewModel
@@ -65,7 +67,8 @@ fun AppNavGraph(
     syncRepository: SyncRepository,
     userRepository: UserRepository,
     categoryRepository: CategoryRepository,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    db: AppDatabase
 ) {
 
     val startDestination = if (sessionManager.isLoggedIn()) {
@@ -242,15 +245,21 @@ fun AppNavGraph(
             )
             val username = userViewModel.username
 
-            val vm: ChatBotViewModel = viewModel()
+            val vm: ChatBotViewModel = viewModel(
+                factory = ChatBotViewModelFactory(
+                    transactionDao = db.transactionDao(),
+                    taskDao = db.taskDao(),
+                    promptDao = db.promptDao(),
+                    memoryDao = db.memoryDao(),
+                    sessionManager = sessionManager,
+                    syncRepository = syncRepository
+                )
+            )
 
             ChatBotScreen(
                 viewModel = vm,
                 username = username,
-                onStartQareeb = {
-                    // navigate to voice assistant screen if you have one,
-                    // or leave empty for now
-                }
+                onStartQareeb = { }
             )
         }
     }
