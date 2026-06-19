@@ -1,7 +1,9 @@
 package com.example.qareeb.presentation.navigation
 
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -45,8 +47,6 @@ import com.example.qareeb.presentation.viewModels.TaskViewModel
 import com.example.qareeb.presentation.viewModels.TaskViewModelFactory
 import com.example.qareeb.presentation.viewModels.UserViewModel
 import com.example.qareeb.presentation.viewModels.UserViewModelFactory
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.platform.LocalContext
 import com.example.qareeb.presentation.viewModels.VoiceEnrollmentViewModel
 
 object Routes {
@@ -73,11 +73,10 @@ fun AppNavGraph(
     modifier: Modifier = Modifier,
     db: AppDatabase
 ) {
-
     val startDestination = if (sessionManager.isLoggedIn()) {
-        Routes.SPLASH      //already logged in,go to splash then dashboard
+        Routes.SPLASH
     } else {
-        Routes.LOGIN       //never logged in, show login first
+        Routes.LOGIN
     }
 
     val getTasksByUser = GetTasksByUserUseCase(taskRepo)
@@ -90,33 +89,26 @@ fun AppNavGraph(
     val updateTransaction = UpdateTransactionUseCase(financeRepo)
     val deleteTransaction = DeleteTransactionUseCase(financeRepo)
 
-    // Scaffold owns the BottomNavBar visibility based on current route
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                BottomNavBar(navController = navController)
-            }
-        }
-    ) { paddingValues ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.padding(paddingValues)
-        ) {
-            composable(Routes.SPLASH) {
-                val activity = LocalContext.current as AppCompatActivity
-                SplashScreen(
-                    activity = activity,
-                    onSplashFinished = {
-                        navController.navigate(Routes.DASHBOARD) {
-                            popUpTo(Routes.SPLASH) { inclusive = true }
-                        }
+    // ✅ No Scaffold here — MainScaffold owns it
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = modifier
+    ) {
+        // ── Splash ──
+        composable(Routes.SPLASH) {
+            val activity = LocalContext.current as AppCompatActivity
+            SplashScreen(
+                activity = activity,
+                onSplashFinished = {
+                    navController.navigate(Routes.DASHBOARD) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
                     }
                 }
             )
         }
 
-        //Dashboard
+        // ── Dashboard ──
         composable(Routes.DASHBOARD) {
             val userViewModel: UserViewModel = viewModel(
                 factory = UserViewModelFactory(sessionManager)
@@ -158,7 +150,7 @@ fun AppNavGraph(
             TasksScreen(viewModel = vm)
         }
 
-        //finance
+        // ── Finance ──
         composable(Routes.FINANCE) {
             val userViewModel: UserViewModel = viewModel(
                 factory = UserViewModelFactory(sessionManager)
@@ -179,7 +171,8 @@ fun AppNavGraph(
             )
             FinanceScreen(viewModel = vm)
         }
-        //login
+
+        // ── Login ──
         composable(Routes.LOGIN) {
             val vm: LoginViewModel = viewModel(
                 factory = LoginViewModelFactory(
@@ -191,7 +184,7 @@ fun AppNavGraph(
             LoginScreen(
                 viewModel = vm,
                 onLoginSuccess = {
-                    navController.navigate(Routes.DASHBOARD) {
+                    navController.navigate(Routes.SPLASH) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
@@ -200,7 +193,7 @@ fun AppNavGraph(
             )
         }
 
-        //register
+        // ── Register ──
         composable(Routes.REGISTER) {
             val vm: SignUpViewModel = viewModel(
                 factory = SignUpViewModelFactory(
@@ -223,17 +216,15 @@ fun AppNavGraph(
             )
         }
 
-        // Voice Enrollment
+        // ── Voice Enrollment ──
         composable(Routes.VOICE_ENROLLMENT) {
             val vm: VoiceEnrollmentViewModel = viewModel()
-            // Retrieve the registered user from session
             val user = UserDomain(
-                userId = sessionManager.getUserId() ?:"",
+                userId = sessionManager.getUserId() ?: "",
                 name = sessionManager.getUsername() ?: "",
                 email = sessionManager.getUserEmail() ?: "",
                 password = ""
             )
-
             VoiceEnrollmentScreen(
                 viewModel = vm,
                 user = user,
@@ -267,7 +258,6 @@ fun AppNavGraph(
                     syncRepository = syncRepository
                 )
             )
-
             ChatBotScreen(
                 viewModel = vm,
                 username = username,
@@ -280,7 +270,6 @@ fun AppNavGraph(
             val userViewModel: UserViewModel = viewModel(
                 factory = UserViewModelFactory(sessionManager)
             )
-
             ProfileScreen(
                 userViewModel = userViewModel,
                 onLogout = {

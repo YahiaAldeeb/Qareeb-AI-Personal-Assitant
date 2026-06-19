@@ -10,8 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.qareeb.data.AppDatabase
 import com.example.qareeb.data.remote.SyncRepository
 import com.example.qareeb.data.repositoryImp.CategoryRepositoryImpl
-import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
+import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.domain.repository.UserRepository
 import com.example.qareeb.presentation.navigation.AppNavGraph
 import com.example.qareeb.presentation.navigation.Routes
@@ -28,15 +28,15 @@ fun MainScaffold(
     syncRepository: SyncRepository,
     db: AppDatabase,
     onStartQareeb: () -> Unit,
-    onLoginSuccess: () -> Unit = {}  // ✅ add this
-
+    onLoginSuccess: () -> Unit = {}
 ) {
     val navController = rememberNavController()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val hideNavBarRoutes = listOf(
+    // ✅ Single source of truth for bottom bar visibility
+    val hideNavBarRoutes = setOf(
         Routes.LOGIN,
         Routes.REGISTER,
         Routes.SPLASH,
