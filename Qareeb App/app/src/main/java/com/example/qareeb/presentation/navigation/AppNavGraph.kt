@@ -25,6 +25,7 @@ import com.example.qareeb.presentation.screens.ChatBotScreen
 import com.example.qareeb.presentation.screens.DashboardScreen
 import com.example.qareeb.presentation.screens.FinanceScreen
 import com.example.qareeb.presentation.screens.LoginScreen
+import com.example.qareeb.presentation.screens.ProfileScreen
 import com.example.qareeb.presentation.screens.SignUpScreen
 import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.screens.TasksScreen
@@ -260,6 +261,22 @@ fun AppNavGraph(
                 viewModel = vm,
                 username = username,
                 onStartQareeb = { }
+            )
+        }
+
+        // ── Profile ──
+        composable(Routes.PROFILE) {
+            val userViewModel: UserViewModel = viewModel(
+                factory = UserViewModelFactory(sessionManager)
+            )
+
+            ProfileScreen(
+                userViewModel = userViewModel,
+                onLogout = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.DASHBOARD) { inclusive = true }
+                    }
+                }
             )
         }
     }
