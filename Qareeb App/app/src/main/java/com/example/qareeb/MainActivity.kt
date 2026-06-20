@@ -10,9 +10,9 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import com.google.firebase.messaging.FirebaseMessaging
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,20 +33,18 @@ import com.example.qareeb.presentation.MainScaffold
 import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.security.AppLockManager
-//import com.example.qareeb.presentation.navigation.MainScaffold
-import com.example.qareeb.presentation.utilis.SessionManager
-import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainActivity :  AppCompatActivity() {
+class MainActivity : AppCompatActivity() {
 
     private val TAG = "QAREEB_DEBUG"
 
     private lateinit var db: AppDatabase
     private lateinit var sessionManager: SessionManager
     private lateinit var syncRepository: SyncRepository
+    private lateinit var categoryRepo: CategoryRepositoryImpl  // ✅ added
 
     private var pendingStartAfterOverlay = false
 
@@ -86,16 +84,19 @@ class MainActivity :  AppCompatActivity() {
             }
         }
 
+    // ─────────────────────────────────────────
+    // onCreate
+    // ─────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
         db = AppDatabase.getDatabase(this)
         sessionManager = SessionManager.getInstance(this)
+        categoryRepo = CategoryRepositoryImpl(db.categoryDao())  // ✅ initialized
 
         val taskRepo = TaskRepositoryImpl(db.taskDao())
         val financeRepo = TransactionRepositoryImpl(db.transactionDao())
-        val categoryRepo = CategoryRepositoryImpl(db.categoryDao())
         val userRepo = UserRepositoryImpl(db.userDao())
 
         syncRepository = SyncRepository(
@@ -144,6 +145,8 @@ class MainActivity :  AppCompatActivity() {
                 Log.d("SYNC", "No user logged in, skipping sync")
             }
         }
+
+        // ✅ Single setContent — with app lock gate
         setContent {
             var isAppUnlocked by remember { mutableStateOf(!AppLockManager.isLocked) }
             var showSplash by remember { mutableStateOf(true) }
@@ -152,13 +155,13 @@ class MainActivity :  AppCompatActivity() {
             LaunchedEffect(AppLockManager.isLocked) {
                 if (AppLockManager.isLocked) {
                     isAppUnlocked = false
-                    showSplash = true   // show splash + re-trigger biometric on resume
+                    showSplash = true
                 }
             }
 
             if (showSplash) {
                 SplashScreen(
-                    activity = this@MainActivity,  // ✅ pass activity directly
+                    activity = this@MainActivity,
                     onSplashFinished = {
                         isAppUnlocked = true
                         showSplash = false
@@ -169,30 +172,43 @@ class MainActivity :  AppCompatActivity() {
                     sessionManager = sessionManager,
                     taskRepo = taskRepo,
                     financeRepo = financeRepo,
+                    categoryRepo = categoryRepo,   // ✅ now passed correctly
                     syncRepository = syncRepository,
                     userRepository = userRepo,
-                    onStartQareeb = { checkPermissionsAndStart() }
+                    db = db,
+
                 )
             }
-
-        setContent {
-            MainScaffold(
-                sessionManager = sessionManager,
-                taskRepo = taskRepo,
-                financeRepo = financeRepo,
-                categoryRepo = categoryRepo,
-                syncRepository = syncRepository,
-                userRepository = userRepo,
-                db = db,
-                onStartQareeb = { checkPermissionsAndStart() },
-                onLoginSuccess = { registerFcmToken() }
-            )
         }
     }
 
+    // ─────────────────────────────────────────
+    // onResume — ✅ now at class level
+    // ─────────────────────────────────────────
+    override fun onResume() {
+        super.onResume()
+        if (intent.getBooleanExtra("trigger_sync", false)) {
+            val userId = intent.getStringExtra("userID")
+                ?: sessionManager.getUserId()
+                ?: return
+            Log.d("SYNC", "App opened from notification, syncing...")
+            lifecycleScope.launch {
+                try {
+                    withContext(Dispatchers.IO) { syncRepository.sync(userId) }
+                    Log.d("SYNC", "Sync after notification completed")
+                } catch (e: Exception) {
+                    Log.e("SYNC", "Sync failed: ${e.message}", e)
+                }
+            }
+            intent.removeExtra("trigger_sync")
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // onDestroy — ✅ now at class level
+    // ─────────────────────────────────────────
     override fun onDestroy() {
         super.onDestroy()
-        // ✅ Unregister receiver to avoid memory leaks
         try {
             unregisterReceiver(syncReceiver)
         } catch (e: Exception) {
@@ -200,13 +216,15 @@ class MainActivity :  AppCompatActivity() {
         }
     }
 
+    // ─────────────────────────────────────────
+    // Private helpers — ✅ now at class level
+    // ─────────────────────────────────────────
     private fun registerFcmToken() {
         val userId = sessionManager.getUserId()
         if (userId.isNullOrEmpty()) {
             Log.d("FCM", "No user logged in, skipping token registration")
             return
         }
-
         FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token ->
                 Log.d("FCM_TOKEN", "Token: $token")
@@ -239,7 +257,6 @@ class MainActivity :  AppCompatActivity() {
             overlayPermissionLauncher.launch(intent)
             return
         }
-
         val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= 33) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -255,23 +272,5 @@ class MainActivity :  AppCompatActivity() {
             startService(intent)
         }
         Log.d(TAG, "QareebListeningService started")
-    }
-    override fun onResume() {
-        super.onResume()
-        // ✅ Check if opened from notification
-        if (intent.getBooleanExtra("trigger_sync", false)) {
-            val userId = intent.getStringExtra("userID") ?: sessionManager.getUserId() ?: return
-            Log.d("SYNC", "App opened from notification, syncing...")
-            lifecycleScope.launch {
-                try {
-                    withContext(Dispatchers.IO) { syncRepository.sync(userId) }
-                    Log.d("SYNC", "Sync after notification completed")
-                } catch (e: Exception) {
-                    Log.e("SYNC", "Sync failed: ${e.message}", e)
-                }
-            }
-            // ✅ Clear the flag so it doesn't sync again on next resume
-            intent.removeExtra("trigger_sync")
-        }
     }
 }

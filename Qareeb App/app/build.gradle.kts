@@ -55,6 +55,7 @@ dependencies {
 
     /* ---------------- Activity ---------------- */
     implementation("androidx.activity:activity-compose:1.9.0")
+    implementation(libs.firebase.messaging.ktx)
 
     /* ---------------- Compose (BOM) ---------------- */
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
@@ -107,4 +108,14 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation("com.google.firebase:firebase-messaging-ktx:23.4.1")
+    // Import the Firebase BOM — it manages all Firebase versions for you
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+
+    // No version number needed when using BOM
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // Add any other Firebase libs here without versions too
+    // implementation("com.google.firebase:firebase-analytics-ktx")
 }

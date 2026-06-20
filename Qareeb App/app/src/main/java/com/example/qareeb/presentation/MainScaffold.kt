@@ -27,8 +27,8 @@ fun MainScaffold(
     userRepository: UserRepository,
     syncRepository: SyncRepository,
     db: AppDatabase,
-    onStartQareeb: () -> Unit,
-    onLoginSuccess: () -> Unit = {}
+    //onStartQareeb: () -> Unit,
+    //onLoginSuccess: () -> Unit = {}
 ) {
     val navController = rememberNavController()
 
