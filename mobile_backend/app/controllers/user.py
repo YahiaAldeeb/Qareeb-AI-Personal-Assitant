@@ -29,12 +29,15 @@ def login_controller(payload: LoginRequest, db: Session):
     return {
         "userID": str(user["userID"]),
         "name": user["name"],
-        "email": user["email"]
+        "email": user["email"],
+        "isVoiceEnrolled": user["voice_embedding"] is not None
     }
 
 def register_controller(payload: RegisterRequest, db: Session):
     try:
-        return register_service(db, payload.name, payload.email, payload.password)
+        res = register_service(db, payload.name, payload.email, payload.password)
+        res["isVoiceEnrolled"] = False
+        return res
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:

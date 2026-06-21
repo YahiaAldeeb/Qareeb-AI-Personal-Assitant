@@ -74,7 +74,11 @@ fun AppNavGraph(
     db: AppDatabase
 ) {
     val startDestination = if (sessionManager.isLoggedIn()) {
-        Routes.SPLASH
+        if (!sessionManager.isVoiceEnrolled() && !sessionManager.hasSkippedVoiceEnrollment()) {
+            Routes.VOICE_ENROLLMENT
+        } else {
+            Routes.SPLASH
+        }
     } else {
         Routes.LOGIN
     }
@@ -184,7 +188,12 @@ fun AppNavGraph(
             LoginScreen(
                 viewModel = vm,
                 onLoginSuccess = {
-                    navController.navigate(Routes.SPLASH) {
+                    val target = if (!sessionManager.isVoiceEnrolled() && !sessionManager.hasSkippedVoiceEnrollment()) {
+                        Routes.VOICE_ENROLLMENT
+                    } else {
+                        Routes.SPLASH
+                    }
+                    navController.navigate(target) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
@@ -229,8 +238,20 @@ fun AppNavGraph(
                 viewModel = vm,
                 user = user,
                 onEnrollmentSuccess = {
-                    navController.navigate(Routes.SPLASH) {
-                        popUpTo(Routes.VOICE_ENROLLMENT) { inclusive = true }
+                    sessionManager.setVoiceEnrolled(true)
+                    sessionManager.setSkippedVoiceEnrollment(false)
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Routes.SPLASH) {
+                            popUpTo(Routes.VOICE_ENROLLMENT) { inclusive = true }
+                        }
+                    }
+                },
+                onSkipClick = {
+                    sessionManager.setSkippedVoiceEnrollment(true)
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Routes.SPLASH) {
+                            popUpTo(Routes.VOICE_ENROLLMENT) { inclusive = true }
+                        }
                     }
                 },
                 onLoginClick = {
@@ -276,6 +297,9 @@ fun AppNavGraph(
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.DASHBOARD) { inclusive = true }
                     }
+                },
+                onVoiceEnrollmentClick = {
+                    navController.navigate(Routes.VOICE_ENROLLMENT)
                 }
             )
         }

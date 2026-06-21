@@ -22,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -37,8 +38,13 @@ import com.example.qareeb.presentation.viewModels.UserViewModel
 @Composable
 fun ProfileScreen(
     userViewModel: UserViewModel,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onVoiceEnrollmentClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVoiceEnrolled = androidx.compose.runtime.remember {
+        com.example.qareeb.presentation.utilis.SessionManager.getInstance(context).isVoiceEnrolled()
+    }
     val username = userViewModel.username
     val email = userViewModel.email ?: "Not set"
     val userId = userViewModel.userId ?: "Unknown"
@@ -161,6 +167,27 @@ fun ProfileScreen(
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        // Voice biometrics button
+                        Button(
+                            onClick = onVoiceEnrollmentClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF7C3AED),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                text = if (isVoiceEnrolled) "Update Voice Biometrics" else "Setup Voice Biometrics",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = dmSansFamily
+                                )
+                            )
+                        }
 
                         // Logout button
                         Button(

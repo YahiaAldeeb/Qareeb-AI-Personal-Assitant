@@ -87,6 +87,24 @@ class SessionManager private constructor(context: Context) {
         return !getUserId().isNullOrEmpty() && !getUsername().isNullOrEmpty()
     }
 
+    fun setVoiceEnrolled(enrolled: Boolean) {
+        prefs.edit().putBoolean("voice_enrolled", enrolled).apply()
+        android.util.Log.d("SESSION", "setVoiceEnrolled: $enrolled")
+    }
+
+    fun isVoiceEnrolled(): Boolean {
+        return prefs.getBoolean("voice_enrolled", false)
+    }
+
+    fun setSkippedVoiceEnrollment(skipped: Boolean) {
+        prefs.edit().putBoolean("skipped_voice_enrollment", skipped).apply()
+        android.util.Log.d("SESSION", "setSkippedVoiceEnrollment: $skipped")
+    }
+
+    fun hasSkippedVoiceEnrollment(): Boolean {
+        return prefs.getBoolean("skipped_voice_enrollment", false)
+    }
+
     fun clearSession() {
         prefs.edit().clear().apply()
         android.util.Log.d("SESSION", "Session cleared")
