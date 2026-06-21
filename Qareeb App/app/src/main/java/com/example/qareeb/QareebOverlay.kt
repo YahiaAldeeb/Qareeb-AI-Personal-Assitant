@@ -5,6 +5,7 @@ import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
@@ -70,6 +71,7 @@ class QareebOverlay(
     private var isProcessing = false
     private var currentState = OverlayState.LISTENING
     private var thinkingAnimator: ValueAnimator? = null
+    private var voiceAuthRetryCount = 0
 
     // --- SMART TIMING VARIABLES ---
     private var hasUserStartedTalking = false
@@ -218,7 +220,6 @@ class QareebOverlay(
 
                 val response = NetworkModule.api.uploadAudio(filePart, userIdPart)
 
-                // Direct insertion: Parse and insert transaction/task directly from API response
                 if (response.status == "success" && response.result?.success == true) {
                     try {
                         withContext(Dispatchers.IO) {
@@ -261,17 +262,68 @@ class QareebOverlay(
                             Log.e("Qareeb", "Sync fallback also failed: ${syncError.message}", syncError)
                         }
                     }
-                }
+                    withContext(Dispatchers.Main) {
+                        setOverlayState(OverlayState.SUCCESS)
+                        mainHandler.postDelayed({ closeOverlay() }, 2000)
+                    }
+                } else if (response.status == "auth_failed") {
+                    Log.w("Qareeb", "Voice biometric auth failed. Attempt ${voiceAuthRetryCount + 1} of 4.")
+                    withContext(Dispatchers.Main) {
+                        // Vibrate to notify failure
+                        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            vibrator?.vibrate(android.os.VibrationEffect.createOneShot(150, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            vibrator?.vibrate(150)
+                        }
 
-                withContext(Dispatchers.Main) {
-                    // Success state
-                    setOverlayState(OverlayState.SUCCESS)
-                    mainHandler.postDelayed({ closeOverlay() }, 2000)
+                        if (voiceAuthRetryCount < 3) {
+                            voiceAuthRetryCount++
+                            setOverlayState(OverlayState.LISTENING)
+                            
+                            // Re-enable listening
+                            isProcessing = false
+                            hasUserStartedTalking = false
+                            lastSpeechTimestamp = System.currentTimeMillis()
+                            
+                            mainHandler.postDelayed({
+                                if (overlayView != null) {
+                                    startRecordingAndListening()
+                                }
+                            }, 500)
+                        } else {
+                            voiceAuthRetryCount = 0
+                            setOverlayState(OverlayState.FAILED)
+                            
+                            // Long vibrate
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                vibrator?.vibrate(android.os.VibrationEffect.createOneShot(400, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                            } else {
+                                @Suppress("DEPRECATION")
+                                vibrator?.vibrate(400)
+                            }
+
+                            mainHandler.postDelayed({
+                                closeOverlay()
+                                val fallbackIntent = Intent(context, com.example.qareeb.security.VoiceAuthFallbackActivity::class.java).apply {
+                                    putExtra("command_text", response.transcription)
+                                    putExtra("userID", userId)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(fallbackIntent)
+                            }, 1500)
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        setOverlayState(OverlayState.FAILED)
+                        mainHandler.postDelayed({ closeOverlay() }, 2000)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("Qareeb", "Upload failed: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    // Failed state
                     setOverlayState(OverlayState.FAILED)
                     mainHandler.postDelayed({ closeOverlay() }, 2000)
                 }
@@ -295,6 +347,7 @@ class QareebOverlay(
         }
         isProcessing = false
         currentState = OverlayState.LISTENING
+        voiceAuthRetryCount = 0
 
         // 2. RELEASE THE MIC
         recorder.stopRecording()

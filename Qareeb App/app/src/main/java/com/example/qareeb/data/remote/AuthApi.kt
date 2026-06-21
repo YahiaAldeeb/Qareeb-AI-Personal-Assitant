@@ -16,7 +16,9 @@ data class LoginRequest(
 data class AuthResponse(
     val userID: String,
     val name: String,
-    val email: String
+    val email: String,
+    @SerializedName("isVoiceEnrolled")
+    val isVoiceEnrolled: Boolean = false
 )
 
 data class RegisterRequest(
@@ -30,7 +32,8 @@ data class RegisterResponse(
     val userID: String,
     val name: String,
     val email: String,
-
+    @SerializedName("isVoiceEnrolled")
+    val isVoiceEnrolled: Boolean = false
 )
 
 
@@ -46,11 +49,11 @@ interface AuthApi {
     @POST("users/register")
     suspend fun register(@Body request: RegisterRequest): RegisterResponse
 
-    // ✅ second API call — send .wav file after registration
+    // ✅ second API call — send .wav files after registration
     @Multipart
     @POST("users/voice/{userID}")
     suspend fun registerVoice(
         @Path("userID") userID: String,
-        @Part wavFile: MultipartBody.Part
+        @Part wavFiles: List<MultipartBody.Part>
     ): VoiceEmbeddingResponse
 }

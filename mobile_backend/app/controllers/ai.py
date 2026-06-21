@@ -12,8 +12,10 @@ VENV_PYTHON = PROJECT_ROOT / "venv" / "Scripts" / "python.exe"
 
 import aiofiles
 from fastapi import UploadFile
+from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
 
+from app.services.voice_auth import verify_voice
 from app.services.ai import (
     transcribe,
     extract_intent,
@@ -118,6 +120,26 @@ async def process_command_controller(file: UploadFile, userID: str, db: Session)
 
         text = transcribe(temp_audio)
         logger.info("process_command_controller: transcription done text=%r", text)
+
+        # Check if user has enrolled voice
+        user = db.execute(
+            sql_text('SELECT voice_embedding FROM "User" WHERE "userID" = :uid'),
+            {"uid": userID}
+        ).mappings().first()
+
+        if user and user["voice_embedding"] is not None:
+            threshold = float(os.environ.get("VOICE_AUTH_THRESHOLD", 0.75))
+            is_verified, score = verify_voice(temp_audio, user["voice_embedding"], threshold=threshold)
+            if not is_verified:
+                logger.warning("Voice verification FAILED for user %s: score=%.4f (threshold=%.4f)", userID, score, threshold)
+                return {
+                    "status": "auth_failed",
+                    "transcription": text,
+                    "message": f"Biometric verification failed (score: {score:.2f})"
+                }
+            logger.info("Voice verification SUCCESS for user %s: score=%.4f", userID, score)
+        else:
+            logger.info("Voice verification skipped: user %s has no voice signature enrolled", userID)
 
         intent = extract_intent(text)
         logger.info("process_command_controller: extracted intent=%s", intent)

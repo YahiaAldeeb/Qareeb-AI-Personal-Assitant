@@ -1,4 +1,5 @@
 package com.example.qareeb.presentation.screens
+
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,21 +34,23 @@ import com.example.qareeb.presentation.theme.interFamily
 import com.example.qareeb.presentation.ui.components.FullBackground
 import com.example.qareeb.presentation.viewModels.VoiceEnrollmentViewModel
 
-// ── Real Screen with ViewModel ──
 @Composable
 fun VoiceEnrollmentScreen(
     viewModel: VoiceEnrollmentViewModel,
     user: UserDomain,
     onEnrollmentSuccess: () -> Unit,
+    onSkipClick: () -> Unit,
     onLoginClick: () -> Unit
 ) {
     val context = LocalContext.current
     val isRecording by viewModel.isRecording
     val isLoading by viewModel.isLoading
-    val isSuccess by viewModel.isSuccess
+    val isEnrollmentFinished by viewModel.isEnrollmentFinished
+    
+    val currentStep by viewModel.currentStep
+    val samplesRecorded by viewModel.samplesRecorded
     val statusMessage by viewModel.statusMessage
-
-    // ✅ No LaunchedEffect — user navigates manually via Confirm button
+    val currentPhrase = viewModel.phrases.getOrElse(currentStep) { "" }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -59,28 +62,43 @@ fun VoiceEnrollmentScreen(
     VoiceEnrollmentContent(
         isRecording = isRecording,
         isLoading = isLoading,
-        isSuccess = isSuccess,
+        isEnrollmentFinished = isEnrollmentFinished,
+        currentStep = currentStep,
+        currentPhrase = currentPhrase,
+        samplesRecorded = samplesRecorded,
         statusMessage = statusMessage,
         onMicClick = {
-            if (isRecording) viewModel.stopRecording(context, user)
+            if (isRecording) viewModel.stopRecording(context)
             else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         },
-        onConfirmClick = { onEnrollmentSuccess() },
+        onResetClick = {
+            viewModel.resetRecordings()
+        },
+        onConfirmClick = {
+            viewModel.uploadVoice(context, user, onEnrollmentSuccess)
+        },
+        onSkipClick = onSkipClick,
         onLoginClick = onLoginClick
     )
 }
 
-// ── Pure UI Composable ──
 @Composable
 fun VoiceEnrollmentContent(
     isRecording: Boolean,
     isLoading: Boolean,
-    isSuccess: Boolean,
+    isEnrollmentFinished: Boolean,
+    currentStep: Int,
+    currentPhrase: String,
+    samplesRecorded: List<Boolean>,
     statusMessage: String,
     onMicClick: () -> Unit,
+    onResetClick: () -> Unit,
     onConfirmClick: () -> Unit,
+    onSkipClick: () -> Unit,
     onLoginClick: () -> Unit
 ) {
+    val allSamplesRecorded = samplesRecorded.all { it }
+
     FullBackground {
         Column(
             modifier = Modifier
@@ -96,18 +114,18 @@ fun VoiceEnrollmentContent(
                 Image(
                     painter = painterResource(id = R.drawable.ellipseblue),
                     contentDescription = null,
-                    modifier = Modifier.size(150.dp)
+                    modifier = Modifier.size(140.dp)
                 )
                 Image(
                     painter = painterResource(id = R.drawable.qareeb),
                     contentDescription = "Qareeb Logo",
-                    modifier = Modifier.size(130.dp)
+                    modifier = Modifier.size(120.dp)
                 )
             }
 
             Text(
                 text = "Secure your Assistant",
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = interFamily,
                 color = Color.White
@@ -135,18 +153,33 @@ fun VoiceEnrollmentContent(
                     )
                     .padding(24.dp)
             ) {
-                Text(
-                    text = "Voice Verification",
-                    fontSize = 14.sp,
-                    fontFamily = interFamily,
-                    color = Color(0xFF14B8A6)
-                )
-
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Spacer(Modifier.height(35.dp))
+                    // Step progress header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Voice Verification",
+                            fontSize = 14.sp,
+                            fontFamily = interFamily,
+                            color = Color(0xFF14B8A6)
+                        )
+                        
+                        Text(
+                            text = "Step ${if (allSamplesRecorded) 3 else (currentStep + 1)} of 3",
+                            fontSize = 14.sp,
+                            fontFamily = interFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF14B8A6)
+                        )
+                    }
+
+                    Spacer(Modifier.height(25.dp))
 
                     Text(
                         text = "Say the following phrase clearly:",
@@ -161,6 +194,7 @@ fun VoiceEnrollmentContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(90.dp)
                             .background(
                                 color = Color(0xFF1E1B3A),
                                 shape = RoundedCornerShape(20.dp)
@@ -169,15 +203,16 @@ fun VoiceEnrollmentContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "\"Every voice tells a story, and Qareeb knows mine\"",
-                            fontSize = 16.sp,
+                            text = if (allSamplesRecorded) "\"All phrases recorded successfully!\"" else currentPhrase,
+                            fontSize = 15.sp,
                             fontFamily = interFamily,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = Color.White,
+                            lineHeight = 20.sp
                         )
                     }
 
-                    Spacer(Modifier.height(15.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     // ── Voice Image ──
                     Image(
@@ -185,7 +220,7 @@ fun VoiceEnrollmentContent(
                         contentDescription = "Voice",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(85.dp),
+                            .height(60.dp),
                         contentScale = ContentScale.Fit
                     )
 
@@ -193,31 +228,47 @@ fun VoiceEnrollmentContent(
                     VoiceMicButton(
                         isRecording = isRecording,
                         isLoading = isLoading,
-                        isSuccess = isSuccess,
+                        isSuccess = allSamplesRecorded || isEnrollmentFinished,
                         onClick = onMicClick
                     )
 
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(5.dp))
 
                     // ── Status Message ──
                     Text(
                         text = statusMessage,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontFamily = interFamily,
                         color = when {
-                            isSuccess -> Color(0xFF4ADE80)       // green on success
-                            isRecording -> Color(0xFFFC8181)     // red while recording
+                            isEnrollmentFinished -> Color(0xFF4ADE80)
+                            isRecording -> Color(0xFFFC8181)
                             else -> Color.White.copy(alpha = 0.7f)
                         }
                     )
 
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(10.dp))
+
+                    // ── Reset Button if recording index > 0 ──
+                    if ((currentStep > 0 || allSamplesRecorded) && !isEnrollmentFinished && !isRecording && !isLoading) {
+                        TextButton(onClick = onResetClick) {
+                            Text(
+                                "Reset & Record Again",
+                                color = Color(0xFFFC8181),
+                                fontSize = 12.sp,
+                                fontFamily = interFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Spacer(Modifier.height(36.dp)) // Maintain layout height consistency
+                    }
+
+                    Spacer(Modifier.height(12.dp))
 
                     // ── Confirm Button ──
-                    // Only enabled after voice successfully uploaded
                     Button(
                         onClick = onConfirmClick,
-                        enabled = isSuccess && !isLoading && !isRecording,
+                        enabled = allSamplesRecorded && !isLoading && !isRecording && !isEnrollmentFinished,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
@@ -235,7 +286,7 @@ fun VoiceEnrollmentContent(
                             )
                         } else {
                             Text(
-                                "Confirm →",
+                                "Confirm & Secure →",
                                 fontSize = 16.sp,
                                 fontFamily = interFamily,
                                 fontWeight = FontWeight.SemiBold,
@@ -244,7 +295,25 @@ fun VoiceEnrollmentContent(
                         }
                     }
 
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(16.dp))
+
+                    // ── Skip Button ──
+                    if (!isEnrollmentFinished && !isLoading) {
+                        TextButton(
+                            onClick = onSkipClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "Skip for now",
+                                fontSize = 14.sp,
+                                fontFamily = interFamily,
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
 
                     // ── Or Divider ──
                     Row(
@@ -296,12 +365,11 @@ fun VoiceEnrollmentContent(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(20.dp))
         }
     }
 }
 
-// ── Mic Button with Pulse Animation ──
 @Composable
 fun VoiceMicButton(
     isRecording: Boolean,
@@ -322,12 +390,12 @@ fun VoiceMicButton(
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(120.dp)
+        modifier = Modifier.size(110.dp)
     ) {
         if (isRecording) {
             Box(
                 modifier = Modifier
-                    .size(110.dp)
+                    .size(100.dp)
                     .scale(scale)
                     .background(
                         color = Color(0xFFFC8181).copy(alpha = 0.25f),
@@ -336,7 +404,7 @@ fun VoiceMicButton(
             )
             Box(
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(80.dp)
                     .scale(scale * 0.9f)
                     .background(
                         color = Color(0xFFFC8181).copy(alpha = 0.15f),
@@ -347,14 +415,14 @@ fun VoiceMicButton(
 
         IconButton(
             onClick = onClick,
-            enabled = !isLoading && !isSuccess,  // ✅ disable mic after success
+            enabled = !isLoading && !isSuccess,
             modifier = Modifier
-                .size(75.dp)
+                .size(70.dp)
                 .background(
                     color = when {
-                        isSuccess -> Color(0xFF4ADE80)       // green after success
-                        isRecording -> Color(0xFFE53E3E)     // red while recording
-                        else -> Color(0xFF7C3AED)            // purple idle
+                        isSuccess -> Color(0xFF4ADE80)
+                        isRecording -> Color(0xFFE53E3E)
+                        else -> Color(0xFF7C3AED)
                     },
                     shape = CircleShape
                 )
@@ -362,7 +430,7 @@ fun VoiceMicButton(
             if (isLoading) {
                 CircularProgressIndicator(
                     color = Color.White,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(26.dp),
                     strokeWidth = 2.dp
                 )
             } else {
@@ -370,74 +438,9 @@ fun VoiceMicButton(
                     imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
                     contentDescription = if (isRecording) "Stop recording" else "Start recording",
                     tint = Color.White,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
-    }
-}
-
-// ── Previews ──
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun VoiceEnrollmentIdlePreview() {
-    QareebTheme {
-        VoiceEnrollmentContent(
-            isRecording = false,
-            isLoading = false,
-            isSuccess = false,
-            statusMessage = "Press the mic to start recording",
-            onMicClick = {},
-            onConfirmClick = {},
-            onLoginClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun VoiceEnrollmentRecordingPreview() {
-    QareebTheme {
-        VoiceEnrollmentContent(
-            isRecording = true,
-            isLoading = false,
-            isSuccess = false,
-            statusMessage = "Recording... tap to stop",
-            onMicClick = {},
-            onConfirmClick = {},
-            onLoginClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun VoiceEnrollmentLoadingPreview() {
-    QareebTheme {
-        VoiceEnrollmentContent(
-            isRecording = false,
-            isLoading = true,
-            isSuccess = false,
-            statusMessage = "Processing...",
-            onMicClick = {},
-            onConfirmClick = {},
-            onLoginClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun VoiceEnrollmentSuccessPreview() {
-    QareebTheme {
-        VoiceEnrollmentContent(
-            isRecording = false,
-            isLoading = false,
-            isSuccess = true,
-            statusMessage = "Voice enrolled successfully!",
-            onMicClick = {},
-            onConfirmClick = {},
-            onLoginClick = {}
-        )
     }
 }

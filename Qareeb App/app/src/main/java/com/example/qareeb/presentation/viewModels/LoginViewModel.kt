@@ -41,6 +41,7 @@ class LoginViewModel(
                     username = response.name,
                     email = response.email
                 )
+                sessionManager.setVoiceEnrolled(response.isVoiceEnrolled)
 
                 // Sync right after login
                 syncRepository.sync(response.userID)
