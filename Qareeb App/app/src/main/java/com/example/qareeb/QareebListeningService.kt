@@ -1,6 +1,5 @@
 package com.example.qareeb
 
-import ai.picovoice.porcupine.PorcupineManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -20,123 +19,186 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.SpeechService
+import org.vosk.android.RecognitionListener
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 
-class QareebListeningService : Service() {
+class QareebListeningService : Service(), RecognitionListener {
 
     private val CHANNEL_ID = "QareebServiceChannel"
     private val NOTIF_ID = 1
-
     private val TAG = "QAREEB_DEBUG"
 
-    // IMPORTANT: keep your real key here
-    private val ACCESS_KEY =
-        "8JyKVGnhuojA9vWl/gfyJfOb3HIzPSPV1sjk9MMXAerRbmaNn3/15w=="
+    private var model: Model? = null
+    private var speechService: SpeechService? = null
 
-    // This file should exist in app/src/main/assets/
-    private val KEYWORD_ASSET_NAME = "hey-q.ppn"
-
-    private var porcupineManager: PorcupineManager? = null
-
-    // Service scope for background work
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // Simple guards to prevent re-entrant starts/stops
-    @Volatile private var isInitialized = false
     @Volatile private var isListening = false
-    @Volatile private var isStarting = false
     @Volatile private var overlayVisible = false
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         Log.d(TAG, "Service onCreate()")
-        // DO NOT init Porcupine here (could block main)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Foreground MUST start immediately
         startForeground(NOTIF_ID, createNotification())
 
-        // Heavy work in background
         serviceScope.launch {
-            ensureInitializedAndStart()
+            withContext(Dispatchers.IO) { initModel() }
+            startListening()
         }
 
         return START_STICKY
     }
 
-    private suspend fun ensureInitializedAndStart() {
-        if (isStarting) return
-        isStarting = true
+    // ── Model Init ──
 
-        try {
-            if (!isInitialized) {
-                withContext(Dispatchers.IO) {
-                    initPorcupineInBackground()
+    private fun initModel() {
+        if (model != null) return
+
+        val modelDir = File(filesDir, "model-en-us")
+
+        if (!modelDir.exists()) {
+            Log.d(TAG, "Unpacking Vosk model from assets...")
+            unpackModel(modelDir)
+        }
+
+        model = Model(modelDir.absolutePath)
+        Log.d(TAG, "Vosk model loaded")
+    }
+
+    private fun unpackModel(targetDir: File) {
+        targetDir.mkdirs()
+        copyAssetDir("model-en-us", targetDir)
+    }
+
+    private fun copyAssetDir(assetPath: String, targetDir: File) {
+        val list = assets.list(assetPath) ?: return
+
+        if (list.isEmpty()) {
+            assets.open(assetPath).use { input ->
+                FileOutputStream(File(targetDir, "")).use { output ->
+                    input.copyTo(output)
                 }
-                isInitialized = true
             }
+            return
+        }
 
-            // Start listening (also off main)
-            withContext(Dispatchers.Default) {
-                startListeningInternal()
+        for (entry in list) {
+            val childAssetPath = "$assetPath/$entry"
+            val childFiles = assets.list(childAssetPath)
+
+            if (childFiles != null && childFiles.isNotEmpty()) {
+                val subDir = File(targetDir, entry)
+                subDir.mkdirs()
+                copyAssetDir(childAssetPath, subDir)
+            } else {
+                assets.open(childAssetPath).use { input ->
+                    FileOutputStream(File(targetDir, entry)).use { output ->
+                        input.copyTo(output)
+                    }
+                }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to init/start Porcupine: ${e.message}", e)
-        } finally {
-            isStarting = false
         }
     }
 
-    private fun initPorcupineInBackground() {
-        // Ensure keyword file exists as a real file path
-        val keywordPath = copyAssetToFilesIfNeeded(KEYWORD_ASSET_NAME).absolutePath
+    // ── Listening ──
 
-        Log.d(TAG, "Porcupine keyword path: $keywordPath")
+    private fun startListening() {
+        if (isListening || model == null) return
 
-        porcupineManager = PorcupineManager.Builder()
-            .setAccessKey(ACCESS_KEY)
-            .setKeywordPath(keywordPath)
-            .setSensitivity(0.7f)
-            .build(applicationContext) { keywordIndex ->
-                if (keywordIndex == 0) {
-                    Log.d(TAG, "Wake word detected!")
+        try {
+            val rec = Recognizer(model, 16000.0f, "[\"hey q\", \"hey queue\", \"[unk]\"]")
 
-                    // Stop listening in background quickly
-                    serviceScope.launch(Dispatchers.Default) {
-                        stopListeningInternal()
-                    }
-
-                    // Show overlay on main
-                    serviceScope.launch(Dispatchers.Main) {
-                        onWakeWordDetected()
-                    }
-                }
+            speechService = SpeechService(rec, 16000.0f).also {
+                it.startListening(this)
             }
 
-        Log.d(TAG, "Porcupine Initialized")
+            isListening = true
+            Log.d(TAG, "Vosk listening started (grammar mode)")
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to start Vosk: ${e.message}", e)
+        }
     }
+
+    private fun stopListening() {
+        speechService?.stop()
+        speechService = null
+        isListening = false
+        Log.d(TAG, "Vosk listening stopped")
+    }
+
+    // ── RecognitionListener callbacks ──
+
+    override fun onPartialResult(hypothesis: String?) {
+        if (hypothesis == null) return
+        checkForWakeWord(hypothesis)
+    }
+
+    override fun onResult(hypothesis: String?) {
+        if (hypothesis == null) return
+        checkForWakeWord(hypothesis)
+    }
+
+    override fun onFinalResult(hypothesis: String?) {
+        // Not used in continuous listening mode
+    }
+
+    override fun onError(exception: Exception?) {
+        Log.e(TAG, "Vosk recognition error: ${exception?.message}", exception)
+        isListening = false
+        serviceScope.launch { startListening() }
+    }
+
+    override fun onTimeout() {
+        isListening = false
+        serviceScope.launch { startListening() }
+    }
+
+    // ── Wake Word Detection ──
+
+    private fun checkForWakeWord(hypothesis: String) {
+        try {
+            val text = JSONObject(hypothesis).optString("text", "")
+                .lowercase().trim()
+
+            if (text.contains("hey q") || text.contains("hey queue")) {
+                Log.d(TAG, "Wake word detected! text='$text'")
+                stopListening()
+                serviceScope.launch(Dispatchers.Main) {
+                    onWakeWordDetected()
+                }
+            }
+        } catch (e: Exception) {
+            // Malformed JSON — ignore
+        }
+    }
+
+    // ── Overlay ──
 
     private fun onWakeWordDetected() {
         if (overlayVisible) return
 
         if (!Settings.canDrawOverlays(this)) {
-            Log.w(TAG, "Overlay permission not granted, cannot show overlay.")
-            // If no overlay, just restart listening safely
-            serviceScope.launch(Dispatchers.Default) { startListeningInternal() }
+            Log.w(TAG, "Overlay permission not granted")
+            serviceScope.launch { startListening() }
             return
         }
 
         overlayVisible = true
 
         val sessionManager = SessionManager.getInstance(this)
-        
-        // Create SyncRepository for the overlay to trigger sync after voice commands
+
         val db = AppDatabase.getDatabase(applicationContext)
         val syncRepository = SyncRepository(
             taskDao = db.taskDao(),
@@ -147,98 +209,21 @@ class QareebListeningService : Service() {
             api = RetrofitInstance.syncApi,
             prefs = getSharedPreferences("sync_prefs", MODE_PRIVATE)
         )
-        
+
         val overlay = QareebOverlay(this, sessionManager, syncRepository) {
-            Log.d(TAG, "Overlay closed. Reinitializing and restarting listening...")
+            Log.d(TAG, "Overlay closed. Restarting Vosk listening...")
             overlayVisible = false
-            
-            // Reinitialize Porcupine for next use
-            serviceScope.launch(Dispatchers.IO) {
-                try {
-                    // Clean up old instance
-                    val oldManager = porcupineManager
-                    porcupineManager = null
-                    isInitialized = false
-                    isListening = false
-                    
-                    // Delete and wait for native cleanup
-                    oldManager?.delete()
-                    
-                    // Delay to allow native resource release
-                    delay(500)
-                    
-                    // Reinitialize with fresh callback
-                    initPorcupineInBackground()
-                    isInitialized = true
-                    
-                    // Verify initialization succeeded
-                    delay(200)
-                    if (porcupineManager != null && isInitialized) {
-                        withContext(Dispatchers.Default) {
-                            startListeningInternal()
-                        }
-                        Log.d(TAG, "Porcupine restarted successfully")
-                    } else {
-                        Log.e(TAG, "Porcupine re-initialization failed - manager is null")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to restart listening: ${e.message}", e)
-                }
-            }
+            serviceScope.launch { startListening() }
         }
 
         overlay.show()
     }
 
-    // --- Listening controls (internal, thread-safe-ish) ---
-
-    private fun startListeningInternal() {
-        if (isListening) return
-        try {
-            porcupineManager?.start()
-            isListening = true
-            Log.d(TAG, "Porcupine Started")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting Porcupine: ${e.message}", e)
-            isListening = false
-        }
-    }
-
-    private fun stopListeningInternal() {
-        if (!isListening) return
-        try {
-            porcupineManager?.stop()
-            isListening = false
-            Log.d(TAG, "Porcupine Stopped")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping Porcupine: ${e.message}", e)
-        }
-    }
-
-    // --- Asset copy helper ---
-
-    private fun copyAssetToFilesIfNeeded(assetName: String): File {
-        val outFile = File(filesDir, assetName)
-        if (outFile.exists() && outFile.length() > 0) return outFile
-
-        assets.open(assetName).use { input ->
-            FileOutputStream(outFile).use { output ->
-                input.copyTo(output)
-            }
-        }
-        return outFile
-    }
-
-    // --- Notification stuff ---
+    // ── Notification ──
 
     private fun createNotification(): Notification {
-        val pendingIntent: PendingIntent = Intent(this, MainActivity::class.java).let {
-            PendingIntent.getActivity(
-                this,
-                0,
-                it,
-                PendingIntent.FLAG_IMMUTABLE
-            )
+        val pendingIntent = Intent(this, MainActivity::class.java).let {
+            PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
         }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -262,19 +247,13 @@ class QareebListeningService : Service() {
         }
     }
 
+    // ── Lifecycle ──
+
     override fun onDestroy() {
         Log.d(TAG, "Service onDestroy()")
-
-        serviceScope.launch(Dispatchers.Default) {
-            try {
-                stopListeningInternal()
-                porcupineManager?.delete()
-                porcupineManager = null
-            } catch (e: Exception) {
-                Log.e(TAG, "Error cleaning up Porcupine: ${e.message}", e)
-            }
-        }
-
+        stopListening()
+        model?.close()
+        model = null
         serviceScope.cancel()
         super.onDestroy()
     }

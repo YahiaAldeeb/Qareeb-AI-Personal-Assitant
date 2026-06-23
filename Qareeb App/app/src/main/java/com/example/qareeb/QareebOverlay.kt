@@ -352,9 +352,7 @@ class QareebOverlay(
         // 2. RELEASE THE MIC
         recorder.stopRecording()
 
-        // 3. WAIT before restarting Porcupine (The Fix)
-        // This gives Android time to fully release the hardware resource
-        // preventing the "VoiceProcessorReadException" loop.
+        // 3. Brief delay to let Android fully release mic hardware
         mainHandler.postDelayed({
             onDismiss()
         }, 500)
