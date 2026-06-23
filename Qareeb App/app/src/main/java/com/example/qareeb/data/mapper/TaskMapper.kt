@@ -18,7 +18,7 @@ fun Task.toDomain(): TaskDomain {
     )
 }
 
-fun TaskDomain.toEntity(): Task{
+fun TaskDomain.toEntity(): Task {
     return Task(
         taskId = taskId,
         userId = userId,
@@ -26,8 +26,9 @@ fun TaskDomain.toEntity(): Task{
         description = description,
         status = status,
         progressPercentage = progressPercentage,
-        createdAt = createdAt,
         priority = priority,
-        dueDate = dueDate
+        dueDate = dueDate,
+        createdAt = createdAt ?: System.currentTimeMillis(),
+        updatedAt = System.currentTimeMillis().toString()
     )
 }

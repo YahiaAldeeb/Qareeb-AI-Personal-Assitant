@@ -1,14 +1,17 @@
 package com.example.qareeb.presentation.viewModels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.qareeb.data.mapper.toEntity
 import com.example.qareeb.domain.model.TaskDomain
 import com.example.qareeb.domain.model.enums.TaskStatus
 import com.example.qareeb.domain.usecase.task.AddTaskUseCase
 import com.example.qareeb.domain.usecase.task.DeleteTaskUseCase
 import com.example.qareeb.domain.usecase.task.GetTasksByUserUseCase
 import com.example.qareeb.domain.usecase.task.UpdateTaskUseCase
+import com.example.qareeb.notification.TaskNotificationScheduler
 import com.example.qareeb.presentation.utilis.SessionManager
 import com.example.qareeb.presentation.utilis.toLocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,13 +28,13 @@ class TaskViewModel(
     private val addTask: AddTaskUseCase,
     private val updateTask: UpdateTaskUseCase,
     private val deleteTask: DeleteTaskUseCase,
-    private val sessionManager: SessionManager,  // ← changed
+    private val sessionManager: SessionManager,
+    private val context: Context,              // ✅ added for notification scheduler
     val username: String
 ) : ViewModel() {
 
     val filters = listOf("All", "Work", "Sports", "Personal", "Travel")
 
-    // ← reads directly from SharedPreferences at creation time, always correct
     private val userId: String = sessionManager.getUserId() ?: ""
 
     init {
@@ -44,7 +47,6 @@ class TaskViewModel(
     private val _selectedFilter = MutableStateFlow("All")
     val selectedFilter: StateFlow<String> = _selectedFilter
 
-    // ── Raw tasks from DB ──
     private val allTasks: StateFlow<List<TaskDomain>> = getTasksByUser(userId)
         .onEach { list ->
             android.util.Log.d("TASK_VM", "Tasks loaded: ${list.size}")
@@ -55,7 +57,6 @@ class TaskViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ── Today's tasks filtered by selected date and category ──
     val todayTasks: StateFlow<List<TaskDomain>> = combine(
         allTasks, _selectedDate, _selectedFilter
     ) { tasks, date, filter ->
@@ -64,12 +65,10 @@ class TaskViewModel(
             val taskDueDate = task.dueDate?.toLocalDate()
             val matchesDate = taskDueDate == date
             val matchesFilter = filter == "All" || task.priority == filter
-            android.util.Log.d("TASK_VM", "  Task '${task.title}': dueDate=$taskDueDate, matchesDate=$matchesDate, matchesFilter=$matchesFilter")
             matchesDate && matchesFilter
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ── Tomorrow's tasks filtered by selected date + 1 and category ──
     val tomorrowTasks: StateFlow<List<TaskDomain>> = combine(
         allTasks, _selectedDate, _selectedFilter
     ) { tasks, date, filter ->
@@ -81,44 +80,52 @@ class TaskViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ── Priority tasks count for dashboard ──
     val priorityTasksCount: StateFlow<Int> = combine(
         allTasks, _selectedDate
     ) { tasks, date ->
         tasks.count { it.priority != null && it.dueDate?.toLocalDate() == date }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // ── Completed tasks count for dashboard ──
     val completedTasksCount: StateFlow<Int> = combine(
         allTasks, _selectedDate
     ) { tasks, date ->
         tasks.count { it.status == TaskStatus.COMPLETED && it.dueDate?.toLocalDate() == date }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // ── Events ──
-    fun onDateSelected(date: LocalDate) {
-        _selectedDate.value = date
-    }
-
-    fun onFilterSelected(filter: String) {
-        _selectedFilter.value = filter
-    }
+    fun onDateSelected(date: LocalDate) { _selectedDate.value = date }
+    fun onFilterSelected(filter: String) { _selectedFilter.value = filter }
 
     fun addTask(task: TaskDomain) {
-        viewModelScope.launch { addTask.invoke(task) }
+        viewModelScope.launch {
+            addTask.invoke(task)
+            // ✅ Schedule notification 2 hours before due date
+            TaskNotificationScheduler.schedule(context, task.toEntity())
+        }
     }
 
     fun updateTask(task: TaskDomain) {
-        viewModelScope.launch { updateTask.invoke(task) }
+        viewModelScope.launch {
+            updateTask.invoke(task)
+            // ✅ Reschedule notification with updated due date
+            TaskNotificationScheduler.cancel(context, task.toEntity())
+            TaskNotificationScheduler.schedule(context, task.toEntity())
+        }
     }
 
     fun deleteTask(task: TaskDomain) {
-        viewModelScope.launch { deleteTask.invoke(task) }
+        viewModelScope.launch {
+            deleteTask.invoke(task)
+            // ✅ Cancel notification when task is deleted
+            TaskNotificationScheduler.cancel(context, task.toEntity())
+        }
     }
 
     fun markAsCompleted(task: TaskDomain) {
         viewModelScope.launch {
-            updateTask.invoke(task.copy(status = TaskStatus.COMPLETED))
+            val updated = task.copy(status = TaskStatus.COMPLETED)
+            updateTask.invoke(updated)
+            // ✅ Cancel notification — task is done
+            TaskNotificationScheduler.cancel(context, task.toEntity())
         }
     }
 
@@ -130,7 +137,10 @@ class TaskViewModel(
 
     fun markAsPostponed(task: TaskDomain) {
         viewModelScope.launch {
-            updateTask.invoke(task.copy(status = TaskStatus.POSTPONED))
+            val updated = task.copy(status = TaskStatus.POSTPONED)
+            updateTask.invoke(updated)
+            // ✅ Cancel notification — task is postponed
+            TaskNotificationScheduler.cancel(context, task.toEntity())
         }
     }
 }
@@ -140,12 +150,14 @@ class TaskViewModelFactory(
     private val addTask: AddTaskUseCase,
     private val updateTask: UpdateTaskUseCase,
     private val deleteTask: DeleteTaskUseCase,
-    private val sessionManager: SessionManager,  // ← changed
+    private val sessionManager: SessionManager,
+    private val context: Context,              // ✅ added
     private val username: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return TaskViewModel(
-            getTasksByUser, addTask, updateTask, deleteTask, sessionManager, username
+            getTasksByUser, addTask, updateTask, deleteTask,
+            sessionManager, context, username             // ✅ added
         ) as T
     }
 }

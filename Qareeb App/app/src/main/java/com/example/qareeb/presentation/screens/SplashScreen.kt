@@ -26,22 +26,25 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    activity: androidx.fragment.app.FragmentActivity,
+    activity: androidx.appcompat.app.AppCompatActivity,
     onSplashFinished: () -> Unit = {}
 ) {
     var showNoCredentialsWarning by remember { mutableStateOf(false) }
+    var authTriggered by remember { mutableStateOf(false) } // ✅ prevent double trigger
 
     LaunchedEffect(Unit) {
-        delay(1500L)
-        BiometricAuthHelper.authenticate(
-            activity = activity,
-            onSuccess = {
-                AppLockManager.unlock()
-                onSplashFinished()
-            },
-            onFailure = {},
-            onNoCredentialsSet = { showNoCredentialsWarning = true }
-        )
+        if (!authTriggered) {
+            authTriggered = true  // ✅ mark as triggered before calling
+            BiometricAuthHelper.authenticate(
+                activity = activity,
+                onSuccess = {
+                    AppLockManager.unlock()
+                    onSplashFinished()
+                },
+                onFailure = {},
+                onNoCredentialsSet = { showNoCredentialsWarning = true }
+            )
+        }
     }
 
     SplashContent(

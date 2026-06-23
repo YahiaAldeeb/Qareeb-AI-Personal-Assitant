@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.AssuredWorkload
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.FloatingActionButton
@@ -74,8 +75,8 @@ fun BottomNavBar(navController: NavHostController) {
             NavigationBarItem(
                 selected = currentRoute == Routes.FINANCE,
                 onClick = { navigateTo(Routes.FINANCE) },
-                icon = { Icon(Icons.Default.AccessTime, contentDescription = "History") },
-                label = { Text("History") }
+                icon = { Icon(Icons.Default.AssuredWorkload, contentDescription = "History") },
+                label = { Text("Finance") }
             )
 
             NavigationBarItem(

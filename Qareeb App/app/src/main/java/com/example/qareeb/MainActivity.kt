@@ -29,6 +29,7 @@ import com.example.qareeb.data.repositoryImp.CategoryRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TaskRepositoryImpl
 import com.example.qareeb.data.repositoryImp.TransactionRepositoryImpl
 import com.example.qareeb.data.repositoryImp.UserRepositoryImpl
+import com.example.qareeb.notification.TaskNotificationReceiver
 import com.example.qareeb.presentation.MainScaffold
 import com.example.qareeb.presentation.screens.SplashScreen
 import com.example.qareeb.presentation.utilis.SessionManager
@@ -90,6 +91,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
 
         db = AppDatabase.getDatabase(this)
         sessionManager = SessionManager.getInstance(this)
@@ -148,35 +150,32 @@ class MainActivity : AppCompatActivity() {
 
         // ✅ Single setContent — with app lock gate
         setContent {
-            var isAppUnlocked by remember { mutableStateOf(!AppLockManager.isLocked) }
-            var showSplash by remember { mutableStateOf(true) }
+            var isAppUnlocked by remember { mutableStateOf(false) }
 
-            // Re-lock whenever app returns from background
+            // ✅ Only re-show splash when coming BACK from background
+            // not on first launch
             LaunchedEffect(AppLockManager.isLocked) {
-                if (AppLockManager.isLocked) {
+                if (AppLockManager.isLocked && AppLockManager.hasBeenUnlockedOnce) {
                     isAppUnlocked = false
-                    showSplash = true
                 }
             }
 
-            if (showSplash) {
+            if (!isAppUnlocked) {
                 SplashScreen(
                     activity = this@MainActivity,
                     onSplashFinished = {
                         isAppUnlocked = true
-                        showSplash = false
                     }
                 )
-            } else if (isAppUnlocked) {
+            } else {
                 MainScaffold(
                     sessionManager = sessionManager,
                     taskRepo = taskRepo,
                     financeRepo = financeRepo,
-                    categoryRepo = categoryRepo,   // ✅ now passed correctly
+                    categoryRepo = categoryRepo,
                     syncRepository = syncRepository,
                     userRepository = userRepo,
-                    db = db,
-
+                    db = db
                 )
             }
         }
@@ -272,5 +271,18 @@ class MainActivity : AppCompatActivity() {
             startService(intent)
         }
         Log.d(TAG, "QareebListeningService started")
+    }
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                TaskNotificationReceiver.CHANNEL_ID,
+                "Task Reminders",
+                android.app.NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifies you 2 hours before a task deadline"
+            }
+            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
+        }
     }
 }

@@ -77,7 +77,7 @@ fun AppNavGraph(
         if (!sessionManager.isVoiceEnrolled() && !sessionManager.hasSkippedVoiceEnrollment()) {
             Routes.VOICE_ENROLLMENT
         } else {
-            Routes.SPLASH
+            Routes.DASHBOARD
         }
     } else {
         Routes.LOGIN
@@ -136,6 +136,7 @@ fun AppNavGraph(
 
         // ── Tasks ──
         composable(Routes.TASKS) {
+            val context = LocalContext.current
             val userViewModel: UserViewModel = viewModel(
                 factory = UserViewModelFactory(sessionManager)
             )
@@ -148,6 +149,7 @@ fun AppNavGraph(
                     updateTask = updateTask,
                     deleteTask = deleteTask,
                     sessionManager = sessionManager,
+                    context = context,
                     username = username
                 )
             )
