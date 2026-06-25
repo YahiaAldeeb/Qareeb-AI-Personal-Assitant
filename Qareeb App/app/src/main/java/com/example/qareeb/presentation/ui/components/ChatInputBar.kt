@@ -44,7 +44,7 @@ fun ChatInputBar(
             .padding(
                 start = 16.dp,
                 end = 16.dp,
-                bottom = 115.dp
+                bottom = 15.dp
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {

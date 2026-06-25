@@ -147,26 +147,26 @@ fun ProfileScreen(
                                 }
 
                                 // User ID row
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = "User ID",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFFA0AEC0),
-                                        fontFamily = dmSansFamily
-                                    )
-                                    Text(
-                                        text = userId,
-                                        fontSize = 14.sp,
-                                        color = Color(0xFF4A5568),
-                                        fontFamily = dmSansFamily
-                                    )
-                                }
+//                                Column(
+//                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+//                                ) {
+//                                    Text(
+//                                        text = "User ID",
+//                                        fontSize = 12.sp,
+//                                        color = Color(0xFFA0AEC0),
+//                                        fontFamily = dmSansFamily
+//                                    )
+//                                    Text(
+//                                        text = userId,
+//                                        fontSize = 14.sp,
+//                                        color = Color(0xFF4A5568),
+//                                        fontFamily = dmSansFamily
+//                                    )
+//                                }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        //Spacer(modifier = Modifier.height(8.dp))
 
                         // Voice biometrics button
                         Button(
@@ -218,4 +218,3 @@ fun ProfileScreen(
         }
     }
 }
-
