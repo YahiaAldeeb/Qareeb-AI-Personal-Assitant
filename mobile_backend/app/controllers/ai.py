@@ -3,6 +3,8 @@ import logging
 import tempfile
 import subprocess
 import uuid
+import time as _time
+import threading
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -29,10 +31,22 @@ from app.services.suggestion import handle_suggestion_response
 logger = logging.getLogger(__name__)
 
 automation_jobs: dict[str, dict] = {}
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=4)
+
+DROIDRUN_TIMEOUT = 300  # 5 minutes
 
 # Store pending suggestions per user in memory
 pending_suggestions: dict[str, str] = {}
+
+
+def _cleanup_job(job_id: str, future):
+    """Auto-cleanup completed job after 60s so automation_jobs doesn't leak."""
+
+    def _remove():
+        automation_jobs.pop(job_id, None)
+        logger.info("auto-cleaned automation job %s", job_id)
+
+    threading.Timer(60, _remove).start()
 
 
 def run_droidrun_sync(command: str) -> dict:
@@ -54,11 +68,12 @@ def run_droidrun_sync(command: str) -> dict:
         "-m", "droidrun", "run", command,
         "--provider", "Groq",
         "--model", "openai/gpt-oss-120b",
-        "--tcp", "--no-stream",
+        "--tcp",
     ]
 
     logger.info(f"run_droidrun_sync: executing cmd={cmd}")
 
+    process = None
     try:
         process = subprocess.Popen(
             cmd,
@@ -72,11 +87,14 @@ def run_droidrun_sync(command: str) -> dict:
         )
 
         output_lines = []
+        start = _time.monotonic()
         for line in process.stdout:
             output_lines.append(line)
             logger.info(f"droidrun: {line.rstrip()}")
+            if _time.monotonic() - start > DROIDRUN_TIMEOUT:
+                raise subprocess.TimeoutExpired(cmd, DROIDRUN_TIMEOUT)
 
-        process.wait()
+        process.wait(timeout=30)
         returncode = process.returncode
         logger.info(f"run_droidrun_sync: subprocess completed, returncode={returncode}")
 
@@ -88,10 +106,16 @@ def run_droidrun_sync(command: str) -> dict:
             "completed_at": datetime.now().isoformat(),
         }
     except subprocess.TimeoutExpired:
-        logger.error("run_droidrun_sync: Timeout after 5 minutes")
-        return {"status": "failed", "error": "Timeout after 5 minutes"}
+        logger.error("run_droidrun_sync: Timeout after %ds", DROIDRUN_TIMEOUT)
+        if process:
+            process.kill()
+            process.wait()
+        return {"status": "failed", "error": f"Timeout after {DROIDRUN_TIMEOUT}s"}
     except Exception as e:
         logger.exception(f"run_droidrun_sync: Exception: {e}")
+        if process and process.poll() is None:
+            process.kill()
+            process.wait()
         return {"status": "failed", "error": str(e)}
 
 
@@ -147,6 +171,7 @@ async def process_command_controller(file: UploadFile, userID: str, db: Session)
         if intent == "UI_AUTOMATION":
             job_id = str(uuid.uuid4())
             future = executor.submit(run_droidrun_sync, text)
+            future.add_done_callback(lambda f: _cleanup_job(job_id, f))
             automation_jobs[job_id] = {
                 "status": "running",
                 "command": text,
@@ -227,6 +252,7 @@ async def process_text_controller(text: str, userID: str, db: Session):
         if intent == "UI_AUTOMATION":
             job_id = str(uuid.uuid4())
             future = executor.submit(run_droidrun_sync, text)
+            future.add_done_callback(lambda f: _cleanup_job(job_id, f))
             automation_jobs[job_id] = {
                 "status": "running",
                 "command": text,

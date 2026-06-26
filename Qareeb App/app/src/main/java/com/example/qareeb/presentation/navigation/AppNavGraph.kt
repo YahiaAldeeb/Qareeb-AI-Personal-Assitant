@@ -1,9 +1,12 @@
 package com.example.qareeb.presentation.navigation
 
+import android.content.Intent
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.example.qareeb.QareebListeningService
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -264,6 +267,7 @@ fun AppNavGraph(
 
         // ── ChatBot ──
         composable(Routes.CHATBOT) {
+            val chatContext = LocalContext.current
             val userViewModel: UserViewModel = viewModel(
                 factory = UserViewModelFactory(sessionManager)
             )
@@ -282,7 +286,14 @@ fun AppNavGraph(
             ChatBotScreen(
                 viewModel = vm,
                 username = username,
-                onStartQareeb = { }
+                onStartQareeb = {
+                    val intent = Intent(chatContext, QareebListeningService::class.java)
+                    if (Build.VERSION.SDK_INT >= 26) {
+                        chatContext.startForegroundService(intent)
+                    } else {
+                        chatContext.startService(intent)
+                    }
+                }
             )
         }
 

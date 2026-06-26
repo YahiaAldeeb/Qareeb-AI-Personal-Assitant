@@ -8,7 +8,6 @@ import whisper
 from dotenv import load_dotenv
 from groq import Groq
 from llama_index.llms.groq import Groq as LlamaGroq
-from droidrun import AgentConfig, DroidrunConfig, CodeActConfig
 from sqlalchemy.orm import Session
 
 from app.models.task import TaskRecord
@@ -244,7 +243,10 @@ Output ONLY valid JSON matching this schema:
         top_p=1,
         stream=False,
     )
-    response_text = _strip_code_fences(completion.choices[0].message.content.strip())
+    raw = completion.choices[0].message.content
+    if not raw or not raw.strip():
+        raise ValueError("LLM returned empty response for finance extraction")
+    response_text = _strip_code_fences(raw.strip())
     data = json.loads(response_text)
     validated = FinanceRecord(**data)
     return validated.model_dump(exclude_none=True)
@@ -333,7 +335,10 @@ Output ONLY valid JSON matching this schema:
         top_p=1,
         stream=False,
     )
-    response_text = _strip_code_fences(completion.choices[0].message.content.strip())
+    raw = completion.choices[0].message.content
+    if not raw or not raw.strip():
+        raise ValueError("LLM returned empty response for task extraction")
+    response_text = _strip_code_fences(raw.strip())
     data = json.loads(response_text)
     validated = TaskRecord(**data)
     return validated.model_dump(exclude_none=True)
@@ -380,7 +385,10 @@ Output ONLY:
         top_p=1,
         stream=False,
     )
-    response_text = _strip_code_fences(completion.choices[0].message.content.strip())
+    raw = completion.choices[0].message.content
+    if not raw or not raw.strip():
+        raise ValueError("LLM returned empty response for task update extraction")
+    response_text = _strip_code_fences(raw.strip())
     return json.loads(response_text)
 
 async def handle_suggestion_check(userID: str, db: Session) -> dict | None:
