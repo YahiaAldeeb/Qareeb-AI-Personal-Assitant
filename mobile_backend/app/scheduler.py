@@ -50,7 +50,7 @@ def start_scheduler(get_db_func):
 
     scheduler.add_job(
         daily_notification_job,
-        trigger = CronTrigger(hour=20, minute=0),  # 8 AM daily
+        trigger = CronTrigger(hour=0, minute=33),  # 8 AM daily
         id="daily_notification_check",
         replace_existing=True,
     )

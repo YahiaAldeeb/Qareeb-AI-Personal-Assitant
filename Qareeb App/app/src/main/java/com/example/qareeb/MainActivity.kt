@@ -190,6 +190,8 @@ class MainActivity : AppCompatActivity() {
 
         if (Settings.canDrawOverlays(this)) {
             startQareebService()
+        } else {
+            checkPermissionsAndStart()
         }
 
         if (intent.getBooleanExtra("trigger_sync", false)) {

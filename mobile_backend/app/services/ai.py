@@ -93,6 +93,49 @@ def _strip_code_fences(text: str) -> str:
     return text
 
 
+def _safe_json_loads(text: str) -> dict:
+    """Parse JSON with repair for common LLM output issues."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    import re
+    repaired = text
+    repaired = re.sub(r',\s*([}\]])', r'\1', repaired)
+
+    open_braces = repaired.count('{') - repaired.count('}')
+    open_brackets = repaired.count('[') - repaired.count(']')
+
+    if open_braces > 0 or open_brackets > 0:
+        in_string = False
+        escape = False
+        last_good = len(repaired)
+        for i, ch in enumerate(repaired):
+            if escape:
+                escape = False
+                continue
+            if ch == '\\':
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+            if not in_string:
+                last_good = i + 1
+
+        if in_string:
+            repaired = repaired[:last_good] + '"'
+            in_string = False
+
+        open_braces = repaired.count('{') - repaired.count('}')
+        open_brackets = repaired.count('[') - repaired.count(']')
+        repaired = re.sub(r',\s*$', '', repaired)
+        repaired += ']' * max(0, open_brackets)
+        repaired += '}' * max(0, open_braces)
+
+    return json.loads(repaired)
+
+
 def get_last_user_message(text: str) -> str:
   # ✅ FIX: if text is a list, convert to string
     if isinstance(text, list):
@@ -235,21 +278,30 @@ Extract:
 Output ONLY valid JSON matching this schema:
 {json.dumps(schema_json, indent=2)}
 """
-    completion = groq_client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        max_completion_tokens=512,
-        top_p=1,
-        stream=False,
-    )
-    raw = completion.choices[0].message.content
-    if not raw or not raw.strip():
-        raise ValueError("LLM returned empty response for finance extraction")
-    response_text = _strip_code_fences(raw.strip())
-    data = json.loads(response_text)
-    validated = FinanceRecord(**data)
-    return validated.model_dump(exclude_none=True)
+    models = ["openai/gpt-oss-120b", FALLBACK_MODEL]
+    last_err = None
+    for model_name in models:
+        try:
+            completion = groq_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_completion_tokens=512,
+                top_p=1,
+                stream=False,
+            )
+            raw = completion.choices[0].message.content
+            if not raw or not raw.strip():
+                logger.warning("extract_finance_data: empty response from %s, trying fallback", model_name)
+                continue
+            response_text = _strip_code_fences(raw.strip())
+            data = _safe_json_loads(response_text)
+            validated = FinanceRecord(**data)
+            return validated.model_dump(exclude_none=True)
+        except Exception as e:
+            logger.warning("extract_finance_data: %s failed: %s", model_name, e)
+            last_err = e
+    raise last_err or ValueError("All models returned empty responses for finance extraction")
 
 
 async def handle_finance_service(text: str, userID: str, db: Session) -> dict:
@@ -301,6 +353,9 @@ async def handle_finance_service(text: str, userID: str, db: Session) -> dict:
 # TASK TRACKER
 # ─────────────────────────────────────────────
 
+FALLBACK_MODEL = "llama-3.3-70b-versatile"
+
+
 def extract_task_data(text: str, memory_context: str = "") -> dict:
     schema_json = TaskRecord.model_json_schema()
     date_context = get_date_context()
@@ -327,21 +382,30 @@ use that day's date automatically even if user didn't specify.
 Output ONLY valid JSON matching this schema:
 {json.dumps(schema_json, indent=2)}
 """
-    completion = groq_client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        max_completion_tokens=512,
-        top_p=1,
-        stream=False,
-    )
-    raw = completion.choices[0].message.content
-    if not raw or not raw.strip():
-        raise ValueError("LLM returned empty response for task extraction")
-    response_text = _strip_code_fences(raw.strip())
-    data = json.loads(response_text)
-    validated = TaskRecord(**data)
-    return validated.model_dump(exclude_none=True)
+    models = ["openai/gpt-oss-120b", FALLBACK_MODEL]
+    last_err = None
+    for model_name in models:
+        try:
+            completion = groq_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_completion_tokens=512,
+                top_p=1,
+                stream=False,
+            )
+            raw = completion.choices[0].message.content
+            if not raw or not raw.strip():
+                logger.warning("extract_task_data: empty response from %s, trying fallback", model_name)
+                continue
+            response_text = _strip_code_fences(raw.strip())
+            data = _safe_json_loads(response_text)
+            validated = TaskRecord(**data)
+            return validated.model_dump(exclude_none=True)
+        except Exception as e:
+            logger.warning("extract_task_data: %s failed: %s", model_name, e)
+            last_err = e
+    raise last_err or ValueError("All models returned empty responses for task extraction")
 
 
 def extract_task_update_data(
@@ -377,19 +441,28 @@ Output ONLY:
   }}
 }}
 """
-    completion = groq_client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        max_completion_tokens=512,
-        top_p=1,
-        stream=False,
-    )
-    raw = completion.choices[0].message.content
-    if not raw or not raw.strip():
-        raise ValueError("LLM returned empty response for task update extraction")
-    response_text = _strip_code_fences(raw.strip())
-    return json.loads(response_text)
+    models = ["openai/gpt-oss-120b", FALLBACK_MODEL]
+    last_err = None
+    for model_name in models:
+        try:
+            completion = groq_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_completion_tokens=512,
+                top_p=1,
+                stream=False,
+            )
+            raw = completion.choices[0].message.content
+            if not raw or not raw.strip():
+                logger.warning("extract_task_update_data: empty response from %s, trying fallback", model_name)
+                continue
+            response_text = _strip_code_fences(raw.strip())
+            return _safe_json_loads(response_text)
+        except Exception as e:
+            logger.warning("extract_task_update_data: %s failed: %s", model_name, e)
+            last_err = e
+    raise last_err or ValueError("All models returned empty responses for task update extraction")
 
 async def handle_suggestion_check(userID: str, db: Session) -> dict | None:
     """
