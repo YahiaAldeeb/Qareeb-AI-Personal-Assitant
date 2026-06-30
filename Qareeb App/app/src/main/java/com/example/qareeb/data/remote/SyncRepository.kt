@@ -148,7 +148,7 @@ class SyncRepository(
                             userId = userId,
                             title = remote.title,
                             description = remote.description,
-                            updatedAt = remote.updated_at,
+                            updatedAt = remote.updated_at ?: java.time.OffsetDateTime.now().toString(),
                             dueDate = dueDateMillis,
                             isDeleted = false,
                             is_synced = true
@@ -290,7 +290,7 @@ class SyncRepository(
                             state = state,
                             isDeleted = false,
                             is_synced = true,
-                            updatedAt = remote.updated_at
+                            updatedAt = remote.updated_at ?: remote.created_at ?: java.time.OffsetDateTime.now().toString()
                         )
                     )
                     upsertedCount++

@@ -5,6 +5,9 @@ from typing import List
 import tempfile
 import os
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models.user import LoginRequest, RegisterRequest
@@ -101,6 +104,7 @@ async def register_voice(
         
         return {"voice_embedding": "success"}
     except Exception as e:
+        logger.exception("register_voice failed for userID=%s", userID)
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:

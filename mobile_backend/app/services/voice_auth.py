@@ -111,10 +111,12 @@ def encrypt_embedding(embedding: np.ndarray) -> bytes:
     f = Fernet(key)
     return f.encrypt(raw_bytes)
 
-def decrypt_embedding(encrypted_bytes: bytes) -> np.ndarray:
+def decrypt_embedding(encrypted_bytes) -> np.ndarray:
     """
     Decrypt bytes back to a float32 numpy array embedding.
     """
+    if isinstance(encrypted_bytes, memoryview):
+        encrypted_bytes = bytes(encrypted_bytes)
     key = get_fernet_key()
     f = Fernet(key)
     raw_bytes = f.decrypt(encrypted_bytes)

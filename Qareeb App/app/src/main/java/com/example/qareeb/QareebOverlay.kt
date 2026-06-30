@@ -220,14 +220,23 @@ class QareebOverlay(
 
                 val response = NetworkModule.api.uploadAudio(filePart, userIdPart)
 
-                if (response.status == "success" && response.result?.success == true) {
+                if (response.status == "accepted") {
+                    Log.d("Qareeb", "UI_AUTOMATION job accepted: ${response.jobId}")
+                    withContext(Dispatchers.Main) {
+                        setOverlayState(OverlayState.SUCCESS)
+                        mainHandler.postDelayed({ closeOverlay() }, 2000)
+                    }
+                } else if (response.status == "success" && response.result?.success == true) {
+                    Log.d("Qareeb", "SUCCESS response: intent=${response.intent}, data=${response.result.data}, transaction=${response.result.data?.transaction}, task=${response.result.data?.task}")
                     try {
                         withContext(Dispatchers.IO) {
                             when (response.intent) {
                                 "FINANCE" -> {
                                     val transactionData = response.result.data?.transaction
                                     if (transactionData != null) {
+                                        Log.d("Qareeb", "Parsing transaction: id=${transactionData.transactionID}, amount=${transactionData.amount}, title=${transactionData.title}")
                                         val transaction = parseTransactionFromResponse(transactionData, userId)
+                                        Log.d("Qareeb", "Room entity: id=${transaction.transactionId}, userId=${transaction.userId}, amount=${transaction.amount}, date=${transaction.date}")
                                         transactionDao.upsertTransaction(transaction)
                                         Log.d("Qareeb", "Transaction inserted directly: ${transaction.transactionId}")
                                     } else {
@@ -253,7 +262,6 @@ class QareebOverlay(
                         }
                     } catch (e: Exception) {
                         Log.e("Qareeb", "Failed to insert transaction/task: ${e.message}", e)
-                        // Fallback to sync if direct insertion fails
                         try {
                             withContext(Dispatchers.IO) {
                                 syncRepository.sync(userId)
@@ -262,6 +270,10 @@ class QareebOverlay(
                             Log.e("Qareeb", "Sync fallback also failed: ${syncError.message}", syncError)
                         }
                     }
+                    context.sendBroadcast(Intent("com.example.qareeb.SYNC_NOW").apply {
+                        putExtra("userID", userId)
+                        setPackage(context.packageName)
+                    })
                     withContext(Dispatchers.Main) {
                         setOverlayState(OverlayState.SUCCESS)
                         mainHandler.postDelayed({ closeOverlay() }, 2000)
@@ -352,12 +364,10 @@ class QareebOverlay(
         // 2. RELEASE THE MIC
         recorder.stopRecording()
 
-        // 3. WAIT before restarting Porcupine (The Fix)
-        // This gives Android time to fully release the hardware resource
-        // preventing the "VoiceProcessorReadException" loop.
+        // 3. Delay to let Android fully release mic hardware before Vosk grabs it
         mainHandler.postDelayed({
             onDismiss()
-        }, 500)
+        }, 1500)
     }
 
     private fun setOverlayState(state: OverlayState) {

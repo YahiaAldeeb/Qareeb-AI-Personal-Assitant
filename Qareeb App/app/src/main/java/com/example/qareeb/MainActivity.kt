@@ -186,6 +186,13 @@ class MainActivity : AppCompatActivity() {
     // ─────────────────────────────────────────
     override fun onResume() {
         super.onResume()
+
+        if (Settings.canDrawOverlays(this)) {
+            startQareebService()
+        } else {
+            checkPermissionsAndStart()
+        }
+
         if (intent.getBooleanExtra("trigger_sync", false)) {
             val userId = intent.getStringExtra("userID")
                 ?: sessionManager.getUserId()

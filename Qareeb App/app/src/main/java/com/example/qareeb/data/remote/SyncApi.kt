@@ -10,7 +10,7 @@ data class TaskSync(
     val userID: String,
     val title: String,
     val description: String? = null,
-    val updated_at: String,
+    val updated_at: String? = null,
     val is_deleted: Boolean = false,
     val dueDate: String? = null
 )
@@ -22,11 +22,12 @@ data class TransactionSync(
     val amount: Double,
     val date: String,
     val state: String? = null,
-    val income: Boolean? = false,        // ← add this
-    val source: String? = null,          // ← add this
-    val description: String? = null,     // ← add this
+    val income: Boolean? = false,
+    val source: String? = null,
+    val description: String? = null,
     val is_deleted: Boolean = false,
-    val updated_at: String
+    val updated_at: String? = null,
+    val created_at: String? = null
 )
 
 data class PushPayload(
